@@ -1,0 +1,3 @@
+syntax: glob
+.idea/vcs.xml
+.idea/zigbrains.xml
