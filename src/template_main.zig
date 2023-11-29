@@ -7,6 +7,8 @@ fn run(lines: *aoc.Lines) ![2]u64 {
         _ = line;
         // TODO
     }
+
+    return .{0, 0};
 }
 
 pub fn main() !void {
