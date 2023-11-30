@@ -2,7 +2,7 @@
 const std = @import("std");
 const aoc = @import("aoc");
 
-fn run(lines: *aoc.Lines) ![2]u64 {
+pub fn run(lines: *aoc.Lines) ![2]u64 {
     while (try lines.next()) |line| {
         _ = line;
         // TODO
