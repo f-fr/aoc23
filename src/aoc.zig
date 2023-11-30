@@ -64,6 +64,20 @@ pub fn readLinesOfInstance(instance: ?usize) !Lines {
     return Lines.init(try std.fmt.bufPrint(&filename, "input/{d:0>2}/input{}.txt", .{ day, inst }));
 }
 
+pub fn run(name: []const u8, comptime runfn: anytype) !void {
+    info("AoC23 - day {s}", .{name});
+    var lines = try readLines();
+    defer lines.deinit();
+
+    const t_start = std.time.milliTimestamp();
+    const scores = try runfn(&lines);
+    const t_end = std.time.milliTimestamp();
+
+    println("Part 1: {}", .{scores[0]});
+    println("Part 2: {}", .{scores[1]});
+    println("Time  : {d:.3}", .{@as(f64, @floatFromInt(t_end - t_start)) / 1000.0});
+}
+
 pub const info = std.log.info;
 
 pub const print = std.debug.print;

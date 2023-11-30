@@ -8,16 +8,9 @@ fn run(lines: *aoc.Lines) ![2]u64 {
         // TODO
     }
 
-    return .{0, 0};
+    return .{ 0, 0 };
 }
 
 pub fn main() !void {
-    aoc.info("AoC23 - day DAY", .{});
-    var lines = try aoc.readLines();
-    defer lines.deinit();
-
-    const scores = try run(&lines);
-
-    aoc.println("Part 1: {}", .{scores[0]});
-    aoc.println("Part 2: {}", .{scores[1]});
+    return aoc.run("DAY", run);
 }
