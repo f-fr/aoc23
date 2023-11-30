@@ -27,6 +27,18 @@ pub fn build(b: *std.Build) !void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
 
+    var gen_txt: [1024]u8 = undefined;
+    var gen_fbs = std.io.fixedBufferStream(&gen_txt);
+    var gen_w = gen_fbs.writer();
+    const gen_step = b.addWriteFiles();
+
+    try gen_w.writeAll(
+        \\const std = @import("std");
+        \\const aoc = @import("aoc");
+        \\const days = .{
+    );
+    var day_mods = std.ArrayList(struct { name: []const u8, module: *std.Build.Module }).init(b.allocator);
+
     var dir = try std.fs.openDirAbsolute(b.pathFromRoot("src"), .{ .iterate = true });
     defer dir.close();
     var dir_it = dir.iterate();
@@ -45,6 +57,10 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         exe.addModule("aoc", aoc);
+
+        // make a module for this day
+        const exe_mod = b.createModule(.{ .source_file = .{ .path = exe_src }, .dependencies = &.{.{ .name = "aoc", .module = aoc }} });
+        try day_mods.append(.{ .name = exe_name, .module = exe_mod });
 
         // install step
         const inst = b.addInstallArtifact(exe, .{});
@@ -75,5 +91,42 @@ pub fn build(b: *std.Build) !void {
         exe_unit_tests.addModule("aoc", aoc);
         const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
         test_step.dependOn(&run_exe_unit_tests.step);
+
+        try gen_w.print("    .{{ .day = {0d}, .filename = \"input/{0d:0>2}/input1.txt\", .run = @import(\"{0d:0>2}\").run }},\n", .{day});
     }
+
+    try gen_w.print("}};\n\n", .{});
+    try gen_w.writeAll(
+        \\pub fn main() !void {
+        \\    inline for (days) |day| {
+        \\        var lines = try aoc.Lines.init(day.filename);
+        \\        defer lines.deinit();
+        \\
+        \\        const t_start = std.time.milliTimestamp();
+        \\        _ = try day.run(&lines);
+        \\        const t_end = std.time.milliTimestamp();
+        \\        const t = @as(f64, @floatFromInt(t_end - t_start)) / 1000.0;
+        \\
+        \\        aoc.println("Day {d:0>2}: {d:.3}", .{day.day, t});
+        \\    }
+        \\}
+    );
+
+    const times_path = gen_step.add("times.zig", gen_fbs.getWritten());
+    const times_exe = b.addExecutable(.{
+        .name = "times",
+        .root_source_file = times_path,
+        .target = target,
+        .optimize = .ReleaseFast,
+    });
+    times_exe.strip = true;
+    for (day_mods.items) |mod| times_exe.addModule(mod.name, mod.module);
+    times_exe.step.dependOn(&gen_step.step);
+    times_exe.addModule("aoc", aoc);
+    const times_inst = b.addInstallArtifact(times_exe, .{});
+    b.getInstallStep().dependOn(&times_inst.step);
+    const times_cmd = b.addRunArtifact(times_exe);
+    times_cmd.step.dependOn(&times_inst.step);
+    const times_step = b.step("times", "Run all exercises with timings");
+    times_step.dependOn(&times_cmd.step);
 }
