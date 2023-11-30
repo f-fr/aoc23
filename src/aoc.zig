@@ -17,7 +17,7 @@ pub const Lines = struct {
     r: std.io.BufferedReader(4096, std.fs.File.Reader),
     buf: [4096]u8 = undefined,
 
-    fn init(filename: []const u8) !Lines {
+    pub fn init(filename: []const u8) !Lines {
         info("Read instance file: {s}", .{filename});
 
         var file = try std.fs.cwd().openFile(filename, .{ .mode = .read_only });
