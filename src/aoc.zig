@@ -1,6 +1,8 @@
 const std = @import("std");
 const testing = std.testing;
 
+pub const PriQueue = @import("./priqueue.zig");
+
 pub const Err = error{
     MissingProgramName,
     InvalidProgramName,
@@ -235,4 +237,8 @@ test "toFloats" {
 
 pub fn sort(comptime T: type, items: []T) void {
     std.mem.sort(T, items, {}, std.sort.asc(T));
+}
+
+test {
+    testing.refAllDecls(@This());
 }
