@@ -1,3 +1,4 @@
 syntax: glob
+.session
 .idea/vcs.xml
 .idea/zigbrains.xml
