@@ -41,23 +41,37 @@ pub fn main() !void {
     return aoc.run("01", run);
 }
 
-test "Day 01" {
+test "Day 01 part 1" {
+    const EXAMPLE1 =
+        \\1abc2
+        \\pqr3stu8vwx
+        \\a1b2c3d4e5f
+        \\treb7uchet
+    ;
     const PART1: u64 = 142;
+
+    var lines = try aoc.Lines.initBuffer(EXAMPLE1);
+    defer lines.deinit();
+    const scores1 = try run(&lines);
+
+    try std.testing.expectEqual(PART1, scores1[0]);
+}
+
+test "Day 01 part 2" {
+    const EXAMPLE2 =
+        \\two1nine
+        \\eightwothree
+        \\abcone2threexyz
+        \\xtwone3four
+        \\4nineeightseven2
+        \\zoneight234
+        \\7pqrstsixteen
+    ;
     const PART2: u64 = 281;
 
-    {
-        var lines = try aoc.Lines.init("input/01/input0.txt");
-        defer lines.deinit();
-        const scores1 = try run(&lines);
+    var lines = try aoc.Lines.initBuffer(EXAMPLE2);
+    defer lines.deinit();
+    const scores2 = try run(&lines);
 
-        try std.testing.expectEqual(PART1, scores1[0]);
-    }
-
-    {
-        var lines = try aoc.Lines.init("input/01/input0part2.txt");
-        defer lines.deinit();
-        const scores2 = try run(&lines);
-
-        try std.testing.expectEqual(PART2, scores2[1]);
-    }
+    try std.testing.expectEqual(PART2, scores2[1]);
 }
