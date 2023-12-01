@@ -13,8 +13,11 @@ pub const SplitErr = error{
 };
 
 pub const Lines = struct {
-    file: std.fs.File,
-    r: std.io.BufferedReader(4096, std.fs.File.Reader),
+    file: ?std.fs.File = null,
+    r: union {
+        file: std.io.BufferedReader(4096, std.fs.File.Reader),
+        buffer: std.io.FixedBufferStream([]const u8),
+    },
     buf: [4096]u8 = undefined,
 
     pub fn init(filename: []const u8) !Lines {
@@ -27,17 +30,26 @@ pub const Lines = struct {
 
         return Lines{
             .file = file,
-            .r = reader,
+            .r = .{ .file = reader },
+        };
+    }
+
+    pub fn initBuffer(buffer: []const u8) !Lines {
+        return Lines{
+            .r = .{ .buffer = std.io.fixedBufferStream(buffer) },
         };
     }
 
     pub fn deinit(self: *Lines) void {
-        self.file.close();
+        if (self.file) |f| f.close();
     }
 
     pub fn next(self: *Lines) !?[]const u8 {
-        var r = self.r.reader();
-        return r.readUntilDelimiterOrEof(&self.buf, '\n');
+        if (self.file) |_| {
+            return self.r.file.reader().readUntilDelimiterOrEof(&self.buf, '\n');
+        } else {
+            return self.r.buffer.reader().readUntilDelimiterOrEof(&self.buf, '\n');
+        }
     }
 };
 
