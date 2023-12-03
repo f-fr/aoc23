@@ -54,6 +54,31 @@ pub const Lines = struct {
             return self.r.buffer.reader().readUntilDelimiterOrEof(&self.buf, '\n');
         }
     }
+
+    /// Read the whole file as a grid and add an additional boundary
+    /// character `boundary` around the field.
+    ///
+    /// The memory belongs to the caller.
+    pub fn readGridWithBoundary(self: *Lines, alloc: std.mem.Allocator, boundary: u8) !struct { n: usize, m: usize, data: []u8 } {
+        var data = std.ArrayList(u8).init(alloc);
+        defer data.deinit();
+
+        var n: usize = 2;
+        var m: usize = 0;
+        while (try self.next()) |line| {
+            if (m == 0) {
+                m = line.len + 2;
+                try data.appendNTimes(boundary, m);
+            }
+            try data.append(boundary);
+            try data.appendSlice(line);
+            try data.append(boundary);
+            n += 1;
+        }
+        try data.appendNTimes(boundary, m);
+
+        return .{ .n = n, .m = m, .data = try data.toOwnedSlice() };
+    }
 };
 
 pub fn readLines() !Lines {
