@@ -2,7 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 
 pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
-pub var allocator = allocator_instance.allocator();
+pub var allocator = if (@import("builtin").is_test) testing.allocator else allocator_instance.allocator();
 
 pub const Err = error{
     MissingProgramName,
