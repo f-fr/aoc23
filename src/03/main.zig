@@ -2,20 +2,24 @@
 const std = @import("std");
 const aoc = @import("aoc");
 
+const isDigit = std.ascii.isDigit;
+
 fn isValid(lines: []const u8, m: usize, i: usize, beg: usize, end: usize) bool {
     for ([_]usize{ i - 1, i, i + 1 }) |k| {
-        if (std.mem.indexOfNone(u8, lines[k * m + beg - 1 .. k * m + end + 1], "0123456789.") != null) return true;
+        for (lines[k * m + beg - 1 .. k * m + end + 1]) |ch| if (!isDigit(ch) and ch != '.') return true;
     }
-
     return false;
 }
 
 fn numAt(line: []const u8, pos: usize) ?usize {
-    if (!std.ascii.isDigit(line[pos])) return null;
+    if (!isDigit(line[pos])) return null;
 
     var i = pos;
-    while (i > 0 and '0' <= line[i - 1] and line[i - 1] <= '9') i -= 1;
-    const end = std.mem.indexOfNonePos(u8, line, pos, "0123456789") orelse line.len;
+    while (i > 0 and isDigit(line[i - 1])) i -= 1;
+
+    var end = pos + 1;
+    while (end < line.len and isDigit(line[end])) : (end += 1) {}
+
     return aoc.toNum(usize, line[i..end]) catch 0;
 }
 
@@ -28,14 +32,14 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     while (try lines.next()) |line| {
         if (m == 0) {
             m = line.len + 2;
-            for (0..m) |_| try data.append('.');
+            try data.appendNTimes('.', m);
         }
         try data.append('.');
         try data.appendSlice(line);
         try data.append('.');
         n += 1;
     }
-    for (0..m) |_| try data.append('.');
+    try data.appendNTimes('.', m);
 
     var score1: usize = 0;
     var score2: usize = 0;
@@ -45,9 +49,12 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         // part 1
         var pos: usize = 0;
         while (true) {
-            pos = std.mem.indexOfAnyPos(u8, ln, pos, "0123456789") orelse ln.len;
-            if (pos >= ln.len) break;
-            const end = std.mem.indexOfNonePos(u8, ln, pos, "0123456789") orelse ln.len;
+            while (pos < ln.len and !isDigit(ln[pos])) : (pos += 1) {}
+            if (pos == ln.len) break;
+
+            var end = pos + 1;
+            while (end < ln.len and isDigit(ln[end])) : (end += 1) {}
+
             if (isValid(data.items, m, i, pos, end)) {
                 const x = try aoc.toNum(usize, ln[pos..end]);
                 score1 += x;
@@ -60,20 +67,17 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             if (ln[j] != '*') continue;
             var cnt: usize = 0;
             var s: usize = 1;
-            for ([_]usize{ i - 1, i, i + 1 }) |k| {
+            inline for (.{ i - 1, i, i + 1 }) |k| {
                 const ln2 = data.items[k * m .. k * m + m];
                 if (numAt(ln2, j)) |x| {
                     cnt += 1;
                     s *= x;
                 } else {
-                    if (numAt(ln2, j - 1)) |x| {
-                        cnt += 1;
-                        s *= x;
-                    }
-                    if (numAt(ln2, j + 1)) |x| {
-                        cnt += 1;
-                        s *= x;
-                    }
+                    inline for (.{ j - 1, j + 1 }) |l|
+                        if (numAt(ln2, l)) |x| {
+                            cnt += 1;
+                            s *= x;
+                        };
                 }
             }
 
