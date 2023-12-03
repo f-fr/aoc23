@@ -4,9 +4,9 @@ const aoc = @import("aoc");
 
 const isDigit = std.ascii.isDigit;
 
-fn isValid(lines: []const u8, m: usize, i: usize, beg: usize, end: usize) bool {
+fn isValid(grid: aoc.Grid, i: usize, beg: usize, end: usize) bool {
     inline for (.{ i - 1, i, i + 1 }) |k| {
-        for (lines[k * m + beg - 1 .. k * m + end + 1]) |ch| if (!isDigit(ch) and ch != '.') return true;
+        for (grid.row(k)[beg - 1 .. end + 1]) |ch| if (!isDigit(ch) and ch != '.') return true;
     }
     return false;
 }
@@ -25,16 +25,13 @@ fn numAt(line: []const u8, pos: usize) ?usize {
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
     const grid = try lines.readGridWithBoundary(aoc.allocator, '.');
-    const n = grid.n;
-    const m = grid.m;
-    const data = grid.data;
-    defer aoc.allocator.free(data);
+    defer aoc.allocator.free(grid.data);
 
     var score1: usize = 0;
     var score2: usize = 0;
 
-    for (1..n - 1) |i| {
-        const ln = data[i * m .. i * m + m];
+    for (1..grid.n - 1) |i| {
+        const ln = grid.row(i);
         // part 1
         var pos: usize = 0;
         while (true) {
@@ -44,10 +41,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             var end = pos + 1;
             while (end < ln.len and isDigit(ln[end])) : (end += 1) {}
 
-            if (isValid(data, m, i, pos, end)) {
-                const x = try aoc.toNum(usize, ln[pos..end]);
-                score1 += x;
-            }
+            if (isValid(grid, i, pos, end)) score1 += try aoc.toNum(usize, ln[pos..end]);
             pos = end;
         }
 
@@ -57,16 +51,15 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             var cnt: usize = 0;
             var s: usize = 1;
             inline for (.{ i - 1, i, i + 1 }) |k| {
-                const ln2 = data[k * m .. k * m + m];
+                const ln2 = grid.row(k);
                 if (numAt(ln2, j)) |x| {
                     cnt += 1;
                     s *= x;
-                } else {
-                    inline for (.{ j - 1, j + 1 }) |l|
-                        if (numAt(ln2, l)) |x| {
-                            cnt += 1;
-                            s *= x;
-                        };
+                } else inline for (.{ j - 1, j + 1 }) |l| {
+                    if (numAt(ln2, l)) |x| {
+                        cnt += 1;
+                        s *= x;
+                    }
                 }
             }
 
