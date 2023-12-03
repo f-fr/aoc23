@@ -248,17 +248,17 @@ test "toInts" {
     try testing.expectError(error.TooFewElementsForSplit, toNums(u32, 7, "1, 2, 3,4,   5   ,6", ","));
 }
 
-fn genToManyA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8, comptime tokenize: anytype) !std.ArrayList(T) {
+fn genToManyA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8, comptime tokenize: anytype) ![]T {
     var result = std.ArrayList(T).init(alloc);
-    errdefer result.deinit();
+    defer result.deinit();
 
     var toks = tokenize(u8, s, separator);
     while (toks.next()) |tok| try result.append(try toNum(T, tok));
 
-    return result;
+    return result.toOwnedSlice();
 }
 
-pub fn toNumsA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8) !std.ArrayList(T) {
+pub fn toNumsA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8) ![]T {
     return genToManyA(T, alloc, s, separator, std.mem.tokenizeSequence);
 }
 
@@ -268,9 +268,9 @@ test "toNumsA" {
     defer arena.deinit();
     const aa = arena.allocator();
 
-    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1, 2, 3,4,   5   ,6", ",")).items, &[_]u32{ 1, 2, 3, 4, 5, 6 });
-    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1,,2,,3,4,,,,5,,,,6", ",")).items, &[_]u32{ 1, 2, 3, 4, 5, 6 });
-    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1  2  3 4    5    6", " ")).items, &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1, 2, 3,4,   5   ,6", ",")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1,,2,,3,4,,,,5,,,,6", ",")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1  2  3 4    5    6", " ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
     try testing.expectError(error.InvalidCharacter, toNumsA(u32, a, "1, 2, a,4,   5   ,6", ","));
     try testing.expectError(error.InvalidCharacter, toNumsA(u32, a, "1, 2, ,4,   5   ,6", ","));
 }
