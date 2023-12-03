@@ -24,28 +24,17 @@ fn numAt(line: []const u8, pos: usize) ?usize {
 }
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
-    var data = std.ArrayList(u8).init(aoc.allocator);
-    defer data.deinit();
-    var n: usize = 2;
-    var m: usize = 0;
-    // we add a boundary of '.' around the field
-    while (try lines.next()) |line| {
-        if (m == 0) {
-            m = line.len + 2;
-            try data.appendNTimes('.', m);
-        }
-        try data.append('.');
-        try data.appendSlice(line);
-        try data.append('.');
-        n += 1;
-    }
-    try data.appendNTimes('.', m);
+    const grid = try lines.readGridWithBoundary(aoc.allocator, '.');
+    const n = grid.n;
+    const m = grid.m;
+    const data = grid.data;
+    defer aoc.allocator.free(data);
 
     var score1: usize = 0;
     var score2: usize = 0;
 
     for (1..n - 1) |i| {
-        const ln = data.items[i * m .. i * m + m];
+        const ln = data[i * m .. i * m + m];
         // part 1
         var pos: usize = 0;
         while (true) {
@@ -55,7 +44,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             var end = pos + 1;
             while (end < ln.len and isDigit(ln[end])) : (end += 1) {}
 
-            if (isValid(data.items, m, i, pos, end)) {
+            if (isValid(data, m, i, pos, end)) {
                 const x = try aoc.toNum(usize, ln[pos..end]);
                 score1 += x;
             }
@@ -68,7 +57,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             var cnt: usize = 0;
             var s: usize = 1;
             inline for (.{ i - 1, i, i + 1 }) |k| {
-                const ln2 = data.items[k * m .. k * m + m];
+                const ln2 = data[k * m .. k * m + m];
                 if (numAt(ln2, j)) |x| {
                     cnt += 1;
                     s *= x;
