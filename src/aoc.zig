@@ -15,6 +15,30 @@ pub const SplitErr = error{
     TooFewElementsForSplit,
 };
 
+pub const Grid = struct {
+    /// Number of rows
+    n: usize,
+    /// Number of columns
+    m: usize,
+    /// The data in row-major order
+    data: []u8,
+
+    /// Return the linear offset of the element at (i, j).
+    pub fn offset(grid: *const Grid, i: usize, j: usize) usize {
+        return grid.m * i + j;
+    }
+
+    /// Return the character at position (i, j)
+    pub fn at(grid: *const Grid, i: usize, j: usize) u8 {
+        return grid.data[grid.offset(i, j)];
+    }
+
+    /// Return a slice to the ith row.
+    pub fn row(grid: *const Grid, i: usize) []u8 {
+        return grid.data[grid.m * i .. grid.m * i + grid.m];
+    }
+};
+
 pub const Lines = struct {
     file: ?std.fs.File = null,
     r: union {
@@ -59,7 +83,7 @@ pub const Lines = struct {
     /// character `boundary` around the field.
     ///
     /// The memory belongs to the caller.
-    pub fn readGridWithBoundary(self: *Lines, alloc: std.mem.Allocator, boundary: u8) !struct { n: usize, m: usize, data: []u8 } {
+    pub fn readGridWithBoundary(self: *Lines, alloc: std.mem.Allocator, boundary: u8) !Grid {
         var data = std.ArrayList(u8).init(alloc);
         defer data.deinit();
 
