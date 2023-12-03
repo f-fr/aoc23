@@ -1,6 +1,9 @@
 const std = @import("std");
 const testing = std.testing;
 
+pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
+pub var allocator = allocator_instance.allocator();
+
 pub const Err = error{
     MissingProgramName,
     InvalidProgramName,
