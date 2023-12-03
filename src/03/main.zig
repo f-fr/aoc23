@@ -5,7 +5,7 @@ const aoc = @import("aoc");
 const isDigit = std.ascii.isDigit;
 
 fn isValid(lines: []const u8, m: usize, i: usize, beg: usize, end: usize) bool {
-    for ([_]usize{ i - 1, i, i + 1 }) |k| {
+    inline for (.{ i - 1, i, i + 1 }) |k| {
         for (lines[k * m + beg - 1 .. k * m + end + 1]) |ch| if (!isDigit(ch) and ch != '.') return true;
     }
     return false;
