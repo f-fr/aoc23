@@ -141,14 +141,14 @@ pub fn build(b: *std.Build) !void {
         \\        defer lines.deinit();
         \\
         \\        const t_start = std.time.milliTimestamp();
-        \\        _ = try day.run(&lines);
+        \\        const s = try day.run(&lines);
         \\        const t_end = std.time.milliTimestamp();
         \\        const t = @as(f64, @floatFromInt(t_end - t_start)) / 1000.0;
         \\
         \\        if (day.version.len == 0)
-        \\            aoc.println("Day {d:0>2}   : {d:.3}", .{day.day, t})
+        \\            aoc.println("Day {d:0>2}   : {d:.3} -- part 1: {d: >10}   part 2: {d: >10}", .{day.day, t, s[0], s[1]})
         \\        else
-        \\            aoc.println("Day {d:0>2} v{s}: {d:.3}", .{day.day, day.version, t});
+        \\            aoc.println("Day {d:0>2} v{s}: {d:.3} -- part 1: {d: >10}   part 2: {d: >10}", .{day.day, day.version, t, s[0], s[1]});
         \\    }
         \\}
     );
