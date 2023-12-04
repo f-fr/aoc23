@@ -18,7 +18,7 @@ fn numAt(line: []const u8, pos: usize) ?usize {
     while (i > 0 and isDigit(line[i - 1])) i -= 1;
 
     var end = pos + 1;
-    while (end < line.len and isDigit(line[end])) : (end += 1) {}
+    while (end < line.len and isDigit(line[end])) end += 1;
 
     return aoc.toNum(usize, line[i..end]) catch 0;
 }
