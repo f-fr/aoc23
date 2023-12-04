@@ -9,15 +9,13 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     defer wins.deinit();
     var ncopies = [_]usize{1} ** 1000;
     var i: usize = 0;
-    while (try lines.next()) |line| {
-        const parts = try aoc.splitAnyN(3, line, ":|");
-        var it = std.mem.tokenizeScalar(u8, parts[1], ' ');
-        while (it.next()) |n| try wins.put(try aoc.toNum(usize, n), {});
-
+    while (try lines.next()) |line| : (i += 1) {
+        const pos = std.mem.indexOf(u8, line, ":") orelse break;
+        var it = std.mem.tokenizeAny(u8, line[pos + 1 ..], " |");
         var cnt: u6 = 0;
-        it = std.mem.tokenizeScalar(u8, parts[2], ' ');
+        // hopefully there are no duplicate numbers ...
         while (it.next()) |n| {
-            if (wins.contains(try aoc.toNum(usize, n))) cnt += 1;
+            if (try wins.fetchPut(try aoc.toNum(usize, n), {}) != null) cnt += 1;
         }
 
         if (cnt > 0) {
@@ -25,7 +23,6 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             for (i + 1..i + cnt + 1) |j| ncopies[j] += ncopies[i];
         }
         score2 += ncopies[i];
-        i += 1;
 
         wins.clearRetainingCapacity();
     }
