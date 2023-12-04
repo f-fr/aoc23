@@ -42,6 +42,8 @@ pub fn build(b: *std.Build) !void {
     var dir = try std.fs.openDirAbsolute(b.pathFromRoot("src"), .{ .iterate = true });
     defer dir.close();
     var dir_it = dir.iterate();
+    var days = std.ArrayList(usize).init(b.allocator);
+    defer days.deinit();
 
     while (try dir_it.next()) |d| {
         if (d.kind != .directory or d.name.len > 2) continue;
@@ -92,9 +94,13 @@ pub fn build(b: *std.Build) !void {
         const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
         test_step.dependOn(&run_exe_unit_tests.step);
 
-        try gen_w.print("    .{{ .day = {0d}, .filename = \"input/{0d:0>2}/input1.txt\", .run = @import(\"{0d:0>2}\").run }},\n", .{day});
+        try days.append(day);
     }
 
+    std.mem.sort(usize, days.items, {}, std.sort.asc(usize));
+    for (days.items) |day| {
+        try gen_w.print("    .{{ .day = {0d}, .filename = \"input/{0d:0>2}/input1.txt\", .run = @import(\"{0d:0>2}\").run }},\n", .{day});
+    }
     try gen_w.print("}};\n\n", .{});
     try gen_w.writeAll(
         \\pub fn main() !void {
