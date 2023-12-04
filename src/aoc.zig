@@ -262,6 +262,10 @@ pub fn toNumsA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separa
     return genToManyA(T, alloc, s, separator, std.mem.tokenizeSequence);
 }
 
+pub fn toNumsAnyA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8) ![]T {
+    return genToManyA(T, alloc, s, separator, std.mem.tokenizeAny);
+}
+
 test "toNumsA" {
     const a = testing.allocator_instance.allocator();
     var arena = std.heap.ArenaAllocator.init(a);
@@ -273,6 +277,19 @@ test "toNumsA" {
     try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1  2  3 4    5    6", " ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
     try testing.expectError(error.InvalidCharacter, toNumsA(u32, a, "1, 2, a,4,   5   ,6", ","));
     try testing.expectError(error.InvalidCharacter, toNumsA(u32, a, "1, 2, ,4,   5   ,6", ","));
+}
+
+test "toNumsAnyA" {
+    const a = testing.allocator_instance.allocator();
+    var arena = std.heap.ArenaAllocator.init(a);
+    defer arena.deinit();
+    const aa = arena.allocator();
+
+    try testing.expectEqualSlices(u32, (try toNumsAnyA(u32, aa, "1, 2, 3,4,   5   ,6", ", ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsAnyA(u32, aa, "1,,2,,3,4,,,,5,,,,6", ",")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsAnyA(u32, aa, "1  2  3 4    5    6", " ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectError(error.InvalidCharacter, toNumsAnyA(u32, a, "1, 2, a,4,   5   ,6", ","));
+    try testing.expectError(error.InvalidCharacter, toNumsAnyA(u32, a, "1, 2, ,4,   5   ,6", ","));
 }
 
 test "toFloats" {
