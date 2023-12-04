@@ -15,7 +15,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         var cnt: u6 = 0;
         // hopefully there are no duplicate numbers ...
         while (it.next()) |n| {
-            if (try wins.fetchPut(try aoc.toNum(usize, n), {}) != null) cnt += 1;
+            cnt += @intFromBool(try wins.fetchPut(try aoc.toNum(usize, n), {}) != null);
         }
 
         score1 += (@as(u64, 1) << cnt) >> 1;
