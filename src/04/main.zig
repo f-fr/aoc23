@@ -18,10 +18,8 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             if (try wins.fetchPut(try aoc.toNum(usize, n), {}) != null) cnt += 1;
         }
 
-        if (cnt > 0) {
-            score1 += @as(u64, 1) << (cnt - 1);
-            for (i + 1..i + cnt + 1) |j| ncopies[j] += ncopies[i];
-        }
+        score1 += (@as(u64, 1) << cnt) >> 1;
+        for (i + 1..i + cnt + 1) |j| ncopies[j] += ncopies[i];
         score2 += ncopies[i];
 
         wins.clearRetainingCapacity();
