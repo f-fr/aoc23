@@ -78,6 +78,7 @@ pub fn build(b: *std.Build) !void {
                 .target = target,
                 .optimize = optimize,
             });
+            exe.strip = optimize == .ReleaseFast or optimize == .ReleaseSmall;
             exe.addModule("aoc", aoc);
 
             // make a module for this day
