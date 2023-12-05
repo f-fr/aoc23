@@ -52,18 +52,21 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
     std.mem.sort(Rng, ranges[0..n], {}, Rng.lessThan);
     // fill gap ranges
-    var allranges = try std.ArrayList(Rng).initCapacity(a, n * 2 + nsteps);
-    allranges.appendAssumeCapacity(.{ .idx = ranges[0].idx, .src = 0, .dst = 0, .len = ranges[0].src });
+    var allranges = try a.alloc(Rng, n * 2 + nsteps);
+    var m: usize = 0;
     for (0..n) |j| {
-        allranges.appendAssumeCapacity(ranges[j]);
-        if (j + 1 == n or ranges[j].idx != ranges[j + 1].idx) {
-            const s = ranges[j].end();
-            allranges.appendAssumeCapacity(.{ .idx = ranges[j].idx, .src = s, .dst = s, .len = std.math.maxInt(u64) - s });
-            if (j + 1 < n) allranges.appendAssumeCapacity(.{ .idx = ranges[j + 1].idx, .src = 0, .dst = 0, .len = ranges[j + 1].src });
-        } else {
-            const s = ranges[j].end();
-            allranges.appendAssumeCapacity(.{ .idx = ranges[j].idx, .src = s, .dst = s, .len = ranges[j + 1].src - s });
+        if (j == 0 or ranges[j - 1].idx != ranges[j].idx) {
+            allranges[m] = .{ .idx = ranges[j].idx, .src = 0, .dst = 0, .len = ranges[j].src };
+            m += 1;
         }
+
+        allranges[m] = ranges[j];
+        m += 1;
+
+        const s = ranges[j].end();
+        const e = if (j + 1 == n or ranges[j].idx != ranges[j + 1].idx) std.math.maxInt(u64) else ranges[j + 1].src;
+        allranges[m] = .{ .idx = ranges[j].idx, .src = s, .dst = s, .len = e - s };
+        m += 1;
     }
 
     const Invs = std.ArrayList(Inv);
@@ -94,24 +97,22 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
                 if (invs.items[j - 1 - skip].end >= invs.items[j].beg) {
                     invs.items[j - 1 - skip].end = @max(invs.items[j - 1 - skip].end, invs.items[j].end);
                     skip += 1;
-                } else {
-                    invs.items[j - skip] = invs.items[j];
-                }
+                } else invs.items[j - skip] = invs.items[j];
             }
             invs.shrinkRetainingCapacity(invs.items.len - skip);
             invs2.clearRetainingCapacity();
 
             for (invs.items) |inv| {
                 // find first range with non-empty intersection
-                while (allranges.items[k].idx < idx) k += 1;
-                while (inv.end <= allranges.items[k].src or inv.beg >= allranges.items[k].end()) k += 1;
+                while (allranges[k].idx < idx) k += 1;
+                while (inv.end <= allranges[k].src or inv.beg >= allranges[k].end()) k += 1;
                 // add intersection with all ranges having a non-empty intersection with inv
-                while (k < allranges.items.len and allranges.items[k].idx == idx and allranges.items[k].src < inv.end) : (k += 1) {
-                    const beg = @max(inv.beg, allranges.items[k].src);
-                    const end = @min(inv.end, allranges.items[k].end());
+                while (k < allranges.len and allranges[k].idx == idx and allranges[k].src < inv.end) : (k += 1) {
+                    const beg = @max(inv.beg, allranges[k].src);
+                    const end = @min(inv.end, allranges[k].end());
                     try invs2.append(.{ //
-                        .beg = beg - allranges.items[k].src + allranges.items[k].dst,
-                        .end = end - allranges.items[k].src + allranges.items[k].dst,
+                        .beg = beg - allranges[k].src + allranges[k].dst,
+                        .end = end - allranges[k].src + allranges[k].dst,
                     });
                 }
 
