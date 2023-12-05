@@ -1,6 +1,6 @@
 const std = @import("std");
 
-fn PriQueue(comptime V: type) type {
+pub fn PriQueue(comptime K: type, comptime V: type) type {
     return struct {
         const Self = @This();
 
@@ -8,6 +8,7 @@ fn PriQueue(comptime V: type) type {
 
         allocator: std.mem.Allocator,
         heap: []usize = &.{},
+        keys: []K = &.{},
         values: []V = &.{},
         positions: []usize = &.{},
 
@@ -20,12 +21,14 @@ fn PriQueue(comptime V: type) type {
 
         pub fn initCapacity(allocator: std.mem.Allocator, capacity: usize) std.mem.Allocator.Error!Self {
             const heap = try allocator.alloc(usize, capacity);
+            const keys = try allocator.alloc(K, capacity);
             const values = try allocator.alloc(V, capacity);
             const positions = try allocator.alloc(usize, capacity);
 
             return .{
                 .allocator = allocator,
                 .heap = heap,
+                .keys = keys,
                 .values = values,
                 .positions = positions,
             };
@@ -33,8 +36,18 @@ fn PriQueue(comptime V: type) type {
 
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.heap);
+            self.allocator.free(self.keys);
             self.allocator.free(self.values);
             self.allocator.free(self.positions);
+        }
+
+        pub fn clearRetainingCapacity(self: *Self) void {
+            self.len = 0;
+            if (self.heap.len > 0) {
+                self.firstfree = 0;
+                for (self.positions, 0..) |*p, i| p.* = i + 1;
+                self.positions[self.positions.len - 1] = self.positions.len - 1;
+            } else self.firstfree = null;
         }
 
         pub fn isEmpty(self: *const Self) bool {
@@ -45,12 +58,13 @@ fn PriQueue(comptime V: type) type {
             return self.len;
         }
 
-        pub fn push(self: *Self, value: V) !Item {
+        pub fn push(self: *Self, key: K, value: V) !Item {
             var idx: usize = undefined;
             if (self.firstfree) |free| {
                 idx = free;
                 self.firstfree = self.positions[idx];
                 if (self.firstfree == free) self.firstfree = null;
+                self.keys[idx] = key;
                 self.values[idx] = value;
                 self.positions[idx] = self.len;
             } else {
@@ -58,9 +72,11 @@ fn PriQueue(comptime V: type) type {
                 if (self.heap.len >= self.len) {
                     const newcap = @max(self.heap.len * 2, 16);
                     self.heap = try self.allocator.realloc(self.heap, newcap);
+                    self.keys = try self.allocator.realloc(self.keys, newcap);
                     self.values = try self.allocator.realloc(self.values, newcap);
                     self.positions = try self.allocator.realloc(self.positions, newcap);
                 }
+                self.keys[idx] = key;
                 self.values[idx] = value;
                 self.positions[idx] = self.len;
             }
@@ -91,8 +107,8 @@ fn PriQueue(comptime V: type) type {
             self.positions[idx] = i;
         }
 
-        pub fn popOrNull(self: *Self) ?struct { item: Item, value: V } {
-            if (self.heap.len == 0) return null;
+        pub fn popOrNull(self: *Self) ?struct { key: K, value: V } {
+            if (self.len == 0) return null;
 
             const idx = self.heap[0];
             self.positions[idx] = self.firstfree orelse idx;
@@ -117,7 +133,7 @@ fn PriQueue(comptime V: type) type {
                 self.positions[last] = i;
             }
 
-            return .{ .item = .{ .i = idx }, .value = self.values[idx] };
+            return .{ .key = self.keys[idx], .value = self.values[idx] };
         }
     };
 }
@@ -125,20 +141,20 @@ fn PriQueue(comptime V: type) type {
 const testing = std.testing;
 
 test "empty pqueue" {
-    var h = PriQueue(usize).init(testing.allocator);
+    var h = PriQueue(usize, usize).init(testing.allocator);
     try testing.expect(h.isEmpty());
     try testing.expectEqual(@as(usize, 0), h.count());
     try testing.expect(h.popOrNull() == null);
 }
 
 test "push and pop" {
-    var h = PriQueue(usize).init(testing.allocator);
+    var h = PriQueue(usize, usize).init(testing.allocator);
     defer h.deinit();
-    const itm1 = try h.push(42);
+    _ = try h.push(1, 42);
     try testing.expect(!h.isEmpty());
     try testing.expectEqual(@as(usize, 1), h.count());
     const res1 = h.popOrNull() orelse unreachable;
-    try testing.expectEqual(itm1, res1.item);
+    try testing.expectEqual(@as(usize, 1), res1.key);
     try testing.expectEqual(@as(usize, 42), res1.value);
     try testing.expect(h.isEmpty());
     try testing.expectEqual(@as(usize, 0), h.count());
@@ -146,64 +162,64 @@ test "push and pop" {
 
 test "heapsort" {
     const ary = [_]u32{ 5, 1, 7, 10, 3, 8, 2, 4, 9, 6 };
-    var itms: [10]PriQueue(u32).Item = undefined;
-    var h = PriQueue(u32).init(testing.allocator);
+    var itms: [10]PriQueue(u32, u32).Item = undefined;
+    var h = PriQueue(u32, u32).init(testing.allocator);
     defer h.deinit();
 
     for (ary) |x| {
-        itms[x - 1] = try h.push(x);
+        itms[x - 1] = try h.push(x, x);
     }
 
     for (1..11) |i| {
         const res = h.popOrNull() orelse unreachable;
         try testing.expectEqual(i, res.value);
-        try testing.expectEqual(itms[i - 1], res.item);
+        try testing.expectEqual(i, res.key);
     }
 }
 
 test "heapsort with decrease" {
     const ary = [_]u32{ 205, 701, 107, 610, 403, 808, 502, 704, 409, 306 };
-    var itms: [10]PriQueue(u32).Item = undefined;
-    var h = PriQueue(u32).init(testing.allocator);
+    var itms: [10]PriQueue(u32, u32).Item = undefined;
+    var h = PriQueue(u32, u32).init(testing.allocator);
     defer h.deinit();
 
     for (ary) |x| {
-        itms[x % 100 - 1] = try h.push(x);
+        itms[x % 100 - 1] = try h.push(x, x);
     }
 
     for (1..11) |i| {
         try testing.expect(h.decrease(itms[i - 1], h.values[itms[i - 1].i] % 100));
         const res = h.popOrNull() orelse unreachable;
         try testing.expectEqual(i, res.value);
-        try testing.expectEqual(itms[i - 1], res.item);
+        try testing.expectEqual(i, res.key % 100);
     }
 }
 
 test "heapsort with decrease and free" {
     const ary = [_]u32{ 205, 701, 107, 610, 403, 808, 502, 704, 409, 306 };
-    var itms: [10]PriQueue(u32).Item = undefined;
-    var h = PriQueue(u32).init(testing.allocator);
+    var itms: [10]PriQueue(u32, u32).Item = undefined;
+    var h = PriQueue(u32, u32).init(testing.allocator);
     defer h.deinit();
 
     for (ary) |x| {
-        if (x % 100 <= 5) itms[x % 100 - 1] = try h.push(x);
+        if (x % 100 <= 5) itms[x % 100 - 1] = try h.push(x, x);
     }
 
     for (1..6) |i| {
         try testing.expect(h.decrease(itms[i - 1], h.values[itms[i - 1].i] % 100));
         const res = h.popOrNull() orelse unreachable;
         try testing.expectEqual(i, res.value);
-        try testing.expectEqual(itms[i - 1], res.item);
+        try testing.expectEqual(i, res.key % 100);
     }
 
     for (ary) |x| {
-        if (x % 100 > 5) itms[x % 100 - 1] = try h.push(x);
+        if (x % 100 > 5) itms[x % 100 - 1] = try h.push(x, x);
     }
 
     for (6..11) |i| {
         try testing.expect(h.decrease(itms[i - 1], h.values[itms[i - 1].i] % 100));
         const res = h.popOrNull() orelse unreachable;
         try testing.expectEqual(i, res.value);
-        try testing.expectEqual(itms[i - 1], res.item);
+        try testing.expectEqual(i, res.key % 100);
     }
 }
