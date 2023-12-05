@@ -69,7 +69,7 @@ pub fn PriQueue(comptime K: type, comptime V: type) type {
                 self.positions[idx] = self.len;
             } else {
                 idx = self.len;
-                if (self.heap.len >= self.len) {
+                if (self.heap.len <= self.len) {
                     const newcap = @max(self.heap.len * 2, 16);
                     self.heap = try self.allocator.realloc(self.heap, newcap);
                     self.keys = try self.allocator.realloc(self.keys, newcap);
