@@ -4,6 +4,9 @@ const testing = std.testing;
 pub const Search = @import("./search.zig").Search;
 pub const PriQueue = @import("./priqueue.zig");
 
+pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
+pub var allocator = if (@import("builtin").is_test) testing.allocator else allocator_instance.allocator();
+
 pub const Err = error{
     MissingProgramName,
     InvalidProgramName,
@@ -13,6 +16,30 @@ pub const Err = error{
 pub const SplitErr = error{
     TooManyElementsForSplit,
     TooFewElementsForSplit,
+};
+
+pub const Grid = struct {
+    /// Number of rows
+    n: usize,
+    /// Number of columns
+    m: usize,
+    /// The data in row-major order
+    data: []u8,
+
+    /// Return the linear offset of the element at (i, j).
+    pub fn offset(grid: *const Grid, i: usize, j: usize) usize {
+        return grid.m * i + j;
+    }
+
+    /// Return the character at position (i, j)
+    pub fn at(grid: *const Grid, i: usize, j: usize) u8 {
+        return grid.data[grid.offset(i, j)];
+    }
+
+    /// Return a slice to the ith row.
+    pub fn row(grid: *const Grid, i: usize) []u8 {
+        return grid.data[grid.m * i .. grid.m * i + grid.m];
+    }
 };
 
 pub const Lines = struct {
@@ -53,6 +80,31 @@ pub const Lines = struct {
         } else {
             return self.r.buffer.reader().readUntilDelimiterOrEof(&self.buf, '\n');
         }
+    }
+
+    /// Read the whole file as a grid and add an additional boundary
+    /// character `boundary` around the field.
+    ///
+    /// The memory belongs to the caller.
+    pub fn readGridWithBoundary(self: *Lines, alloc: std.mem.Allocator, boundary: u8) !Grid {
+        var data = std.ArrayList(u8).init(alloc);
+        defer data.deinit();
+
+        var n: usize = 2;
+        var m: usize = 0;
+        while (try self.next()) |line| {
+            if (m == 0) {
+                m = line.len + 2;
+                try data.appendNTimes(boundary, m);
+            }
+            try data.append(boundary);
+            try data.appendSlice(line);
+            try data.append(boundary);
+            n += 1;
+        }
+        try data.appendNTimes(boundary, m);
+
+        return .{ .n = n, .m = m, .data = try data.toOwnedSlice() };
     }
 };
 
@@ -199,18 +251,22 @@ test "toInts" {
     try testing.expectError(error.TooFewElementsForSplit, toNums(u32, 7, "1, 2, 3,4,   5   ,6", ","));
 }
 
-fn genToManyA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8, comptime tokenize: anytype) !std.ArrayList(T) {
+fn genToManyA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8, comptime tokenize: anytype) ![]T {
     var result = std.ArrayList(T).init(alloc);
-    errdefer result.deinit();
+    defer result.deinit();
 
     var toks = tokenize(u8, s, separator);
     while (toks.next()) |tok| try result.append(try toNum(T, tok));
 
-    return result;
+    return result.toOwnedSlice();
 }
 
-pub fn toNumsA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8) !std.ArrayList(T) {
+pub fn toNumsA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8) ![]T {
     return genToManyA(T, alloc, s, separator, std.mem.tokenizeSequence);
+}
+
+pub fn toNumsAnyA(comptime T: type, alloc: std.mem.Allocator, s: []const u8, separator: []const u8) ![]T {
+    return genToManyA(T, alloc, s, separator, std.mem.tokenizeAny);
 }
 
 test "toNumsA" {
@@ -219,11 +275,24 @@ test "toNumsA" {
     defer arena.deinit();
     const aa = arena.allocator();
 
-    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1, 2, 3,4,   5   ,6", ",")).items, &[_]u32{ 1, 2, 3, 4, 5, 6 });
-    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1,,2,,3,4,,,,5,,,,6", ",")).items, &[_]u32{ 1, 2, 3, 4, 5, 6 });
-    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1  2  3 4    5    6", " ")).items, &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1, 2, 3,4,   5   ,6", ",")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1,,2,,3,4,,,,5,,,,6", ",")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsA(u32, aa, "1  2  3 4    5    6", " ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
     try testing.expectError(error.InvalidCharacter, toNumsA(u32, a, "1, 2, a,4,   5   ,6", ","));
     try testing.expectError(error.InvalidCharacter, toNumsA(u32, a, "1, 2, ,4,   5   ,6", ","));
+}
+
+test "toNumsAnyA" {
+    const a = testing.allocator_instance.allocator();
+    var arena = std.heap.ArenaAllocator.init(a);
+    defer arena.deinit();
+    const aa = arena.allocator();
+
+    try testing.expectEqualSlices(u32, (try toNumsAnyA(u32, aa, "1, 2, 3,4,   5   ,6", ", ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsAnyA(u32, aa, "1,,2,,3,4,,,,5,,,,6", ",")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectEqualSlices(u32, (try toNumsAnyA(u32, aa, "1  2  3 4    5    6", " ")), &[_]u32{ 1, 2, 3, 4, 5, 6 });
+    try testing.expectError(error.InvalidCharacter, toNumsAnyA(u32, a, "1, 2, a,4,   5   ,6", ","));
+    try testing.expectError(error.InvalidCharacter, toNumsAnyA(u32, a, "1, 2, ,4,   5   ,6", ","));
 }
 
 test "toFloats" {
