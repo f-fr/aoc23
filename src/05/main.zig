@@ -11,68 +11,68 @@ const Rng = struct {
     fn end(self: *const Rng) u64 {
         return self.src + self.len;
     }
+
+    fn lessThan(_: void, a: Rng, b: Rng) bool {
+        if (a.idx != b.idx) return a.idx < b.idx;
+        return a.src < b.src;
+    }
 };
 
-const Inv = struct { beg: u64, end: u64 };
+const Inv = struct {
+    beg: u64,
+    end: u64,
 
-fn lessThanRng(_: void, a: Rng, b: Rng) bool {
-    if (a.idx != b.idx) return a.idx < b.idx;
-    return a.src < b.src;
-}
-
-fn lessThanInv(_: void, a: Inv, b: Inv) bool {
-    if (a.beg != b.beg) return a.beg < b.beg;
-    return a.end < b.end;
-}
+    fn lessThan(_: void, a: Inv, b: Inv) bool {
+        if (a.beg != b.beg) return a.beg < b.beg;
+        return a.end < b.end;
+    }
+};
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
-    var i: usize = 0;
-    var ranges: [1000]Rng = undefined;
-    var n: usize = 0;
+    var arena = std.heap.ArenaAllocator.init(aoc.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
 
     const fst_line = try lines.next() orelse return error.MissingSeeds;
-    const seeds = try aoc.toNumsAnyA(u64, aoc.allocator, fst_line[(std.mem.indexOfScalar(u8, fst_line, ':') orelse return error.MissingSeeds) + 1 ..], " ");
-    defer aoc.allocator.free(seeds);
+    const seeds = try aoc.toNumsAnyA(u64, a, fst_line[(std.mem.indexOfScalar(u8, fst_line, ':') orelse return error.MissingSeeds) + 1 ..], " ");
 
+    var nsteps: usize = 0;
+    var ranges: [1000]Rng = undefined;
+    var n: usize = 0;
     while (try lines.next()) |line| {
         if (line.len == 0) continue;
         if (std.mem.indexOfScalar(u8, line, ':') != null) {
-            i += 1;
+            nsteps += 1;
             continue;
         }
         const nums = try aoc.toNumsAny(u64, 3, line, " ");
-        ranges[n] = .{ .idx = i, .src = nums[1], .dst = nums[0], .len = nums[2] };
+        ranges[n] = .{ .idx = nsteps, .src = nums[1], .dst = nums[0], .len = nums[2] };
         n += 1;
     }
 
-    std.mem.sort(Rng, ranges[0..n], {}, lessThanRng);
+    std.mem.sort(Rng, ranges[0..n], {}, Rng.lessThan);
     // fill gap ranges
-    var allranges = std.ArrayList(Rng).init(aoc.allocator);
-    defer allranges.deinit();
+    var allranges = try std.ArrayList(Rng).initCapacity(a, n * 2 + nsteps);
+    allranges.appendAssumeCapacity(.{ .idx = ranges[0].idx, .src = 0, .dst = 0, .len = ranges[0].src });
     for (0..n) |j| {
-        if (j == 0) {
-            try allranges.append(.{ .idx = ranges[j].idx, .src = 0, .dst = 0, .len = ranges[j].src });
-        } else if (ranges[j - 1].idx != ranges[j].idx) {
-            const s = ranges[j - 1].src + ranges[j - 1].len;
-            try allranges.append(.{ .idx = ranges[j - 1].idx, .src = s, .dst = s, .len = std.math.maxInt(u64) - s });
-            try allranges.append(.{ .idx = ranges[j].idx, .src = 0, .dst = 0, .len = ranges[j].src });
+        allranges.appendAssumeCapacity(ranges[j]);
+        if (j + 1 == n or ranges[j].idx != ranges[j + 1].idx) {
+            const s = ranges[j].end();
+            allranges.appendAssumeCapacity(.{ .idx = ranges[j].idx, .src = s, .dst = s, .len = std.math.maxInt(u64) - s });
+            if (j + 1 < n) allranges.appendAssumeCapacity(.{ .idx = ranges[j + 1].idx, .src = 0, .dst = 0, .len = ranges[j + 1].src });
         } else {
-            const s = ranges[j - 1].src + ranges[j - 1].len;
-            const l = ranges[j].src - s;
-            try allranges.append(.{ .idx = ranges[j].idx, .src = s, .dst = s, .len = l });
+            const s = ranges[j].end();
+            allranges.appendAssumeCapacity(.{ .idx = ranges[j].idx, .src = s, .dst = s, .len = ranges[j + 1].src - s });
         }
-        try allranges.append(ranges[j]);
     }
 
     const Invs = std.ArrayList(Inv);
-    var invs = Invs.init(aoc.allocator);
-    defer invs.deinit();
-    var invs2 = Invs.init(aoc.allocator);
-    defer invs2.deinit();
+    var invs = try Invs.initCapacity(a, 200);
+    var invs2 = try Invs.initCapacity(a, 200);
 
     // This could be done simpler by just computing pairwise
     // intersections of (range,interval) pairs. However, the following
-    // implementation runs in O(n) because each range in (essentially)
+    // implementation runs in O(n) because each range is (essentially)
     // considered at most once.
 
     var scores: [2]u64 = undefined;
@@ -87,7 +87,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
         var k: usize = 0;
         for (1..8) |idx| {
-            std.mem.sort(Inv, invs.items, {}, lessThanInv);
+            std.mem.sort(Inv, invs.items, {}, Inv.lessThan);
             // compress successive intervals
             var skip: usize = 0;
             for (1..invs.items.len) |j| {
