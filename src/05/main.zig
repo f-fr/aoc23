@@ -33,15 +33,15 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const fst_line = try lines.next() orelse return error.MissingSeeds;
-    const seeds = try aoc.toNumsAnyA(u64, a, fst_line[(std.mem.indexOfScalar(u8, fst_line, ':') orelse return error.MissingSeeds) + 1 ..], " ");
+    const fst_line = try aoc.splitN(2, try lines.next() orelse return error.MissingSeeds, ":");
+    const seeds = try aoc.toNumsAnyA(u64, a, fst_line[1], " ");
 
     var nsteps: usize = 0;
     var ranges: [1000]Rng = undefined;
     var n: usize = 0;
     while (try lines.next()) |line| {
         if (line.len == 0) continue;
-        if (std.mem.indexOfScalar(u8, line, ':') != null) {
+        if (std.mem.indexOfScalar(u8, line, ':')) |_| {
             nsteps += 1;
             continue;
         }
