@@ -154,3 +154,85 @@ test "simple undirected" {
     try testing.expectEqual(@as(?u8, 'b'), preds['c']);
     try testing.expectEqual(@as(?u8, 'c'), preds['t']);
 }
+
+test "lattice graph" {
+    const Nd = struct { x: i32, y: i32 };
+
+    const s = Nd{ .x = 2, .y = 3 };
+    const t = Nd{ .x = 7, .y = 1 };
+
+    const Graph = struct {
+        const Self = @This();
+        const Node = Nd;
+        const Edge = [2]Node;
+        const Value = f64;
+
+        const Special = [_]Edge{ .{ .{ .x = 4, .y = 1 }, .{ .x = 5, .y = 1 } }, .{ .{ .x = 2, .y = 2 }, .{ .x = 3, .y = 2 } }, .{ .{ .x = 3, .y = 2 }, .{ .x = 4, .y = 2 } }, .{ .{ .x = 6, .y = 2 }, .{ .x = 7, .y = 2 } }, .{ .{ .x = 6, .y = 3 }, .{ .x = 7, .y = 4 } }, .{ .{ .x = 5, .y = 2 }, .{ .x = 5, .y = 3 } }, .{ .{ .x = 6, .y = 1 }, .{ .x = 6, .y = 2 } } };
+
+        pub const Iterator = struct {
+            src: Node,
+            dir: usize = 0,
+
+            pub fn next(self: *Iterator) ?struct { node: Node, edge: Edge, dist: Value } {
+                if (self.dir == 4) return null;
+                self.dir += 1;
+                const u = self.src;
+                const v =
+                    switch (self.dir) {
+                    1 => Node{ .x = u.x - 1, .y = u.y },
+                    2 => Node{ .x = u.x, .y = u.y - 1 },
+                    3 => Node{ .x = u.x + 1, .y = u.y },
+                    4 => Node{ .x = u.x, .y = u.y + 1 },
+                    else => unreachable,
+                };
+                const e = if (self.dir <= 2) .{ v, u } else .{ u, v };
+                var d: Value = 2;
+                for (Special) |f| {
+                    if (e[0].x == f[0].x and e[1].x == f[1].x and e[0].y == f[0].y and e[1].y == f[1].y) {
+                        d = 3;
+                        break;
+                    }
+                }
+                return .{ .node = v, .edge = e, .dist = d };
+            }
+        };
+
+        fn neighs(self: *const Self, u: Node) Iterator {
+            _ = self;
+            return .{ .src = u };
+        }
+
+        fn heur(self: *const Self, u: Node) Value {
+            _ = self;
+            return @floatFromInt(4 * (@abs(u.x - t.x) + @abs(u.y - t.y)) / 2);
+        }
+    };
+
+    var g = Graph{};
+    var search = Search(Graph).init(testing.allocator, &g);
+    defer search.deinit();
+    try search.start(s);
+
+    var preds = [1][12]?Nd{[1]?Nd{null} ** 12} ** 12;
+
+    while (try search.next()) |nxt| {
+        try testing.expect(nxt.node.x >= @min(s.x, t.x) - @as(i32, 1));
+        try testing.expect(nxt.node.x <= @max(s.x, t.x) + @as(i32, 1));
+        try testing.expect(nxt.node.y >= @min(s.x, t.y) - @as(i32, 1));
+        try testing.expect(nxt.node.y <= @max(s.y, t.y) + @as(i32, 1));
+
+        const x: usize = @intCast(nxt.node.x);
+        const y: usize = @intCast(nxt.node.y);
+        preds[x][y] = nxt.pred;
+
+        if (nxt.node.x == t.x and nxt.node.y == t.y) break;
+    }
+
+    try testing.expectEqualDeep(Nd{ .x = 6, .y = 1 }, preds[7][1].?);
+    try testing.expectEqualDeep(Nd{ .x = 5, .y = 1 }, preds[6][1].?);
+    try testing.expectEqualDeep(Nd{ .x = 5, .y = 2 }, preds[5][1].?);
+    try testing.expectEqualDeep(Nd{ .x = 4, .y = 2 }, preds[5][2].?);
+    try testing.expectEqualDeep(Nd{ .x = 4, .y = 3 }, preds[4][2].?);
+    try testing.expectEqualDeep(Nd{ .x = 3, .y = 3 }, preds[4][3].?);
+    try testing.expectEqualDeep(Nd{ .x = 2, .y = 3 }, preds[3][3].?);
+}
