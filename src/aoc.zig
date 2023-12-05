@@ -1,6 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
+pub const Search = @import("./search.zig").Search;
 pub const PriQueue = @import("./priqueue.zig");
 
 pub const Err = error{
