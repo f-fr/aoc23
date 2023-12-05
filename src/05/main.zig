@@ -89,7 +89,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         }
 
         var k: usize = 0;
-        for (1..8) |idx| {
+        for (1..nsteps + 1) |idx| {
             std.mem.sort(Inv, invs.items, {}, Inv.lessThan);
             // compress successive intervals
             var skip: usize = 0;
