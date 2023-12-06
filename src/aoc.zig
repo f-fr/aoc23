@@ -116,7 +116,8 @@ pub fn readLinesOfExample() !Lines {
 pub fn readLinesOfInstance(instance: ?usize) !Lines {
     var args = std.process.args();
     const program = args.next() orelse return Err.MissingProgramName;
-    const day = std.fmt.parseInt(u8, std.fs.path.basename(program), 10) catch return Err.InvalidProgramName;
+    const end = std.mem.indexOfScalar(u8, program, '_') orelse program.len;
+    const day = std.fmt.parseInt(u8, std.fs.path.basename(program[0..end]), 10) catch return Err.InvalidProgramName;
 
     const inst = instance orelse fromarg: {
         const inst = args.next() orelse "1";
