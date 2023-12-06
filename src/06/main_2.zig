@@ -38,12 +38,12 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const ltimes = try aoc.splitN(2, try lines.next() orelse return error.MissingTimes, ":");
     const times = try aoc.toNumsAnyA(u64, a, ltimes[1], " ");
     const nt = ltimes[1].len - std.mem.replace(u8, ltimes[1], " ", "", &buf);
-    const t2 = try aoc.toNum(usize, buf[0..nt]);
+    const t2 = try aoc.toNum(u64, buf[0..nt]);
 
     const ldists = try aoc.splitN(2, try lines.next() orelse return error.MissingDists, ":");
     const dists = try aoc.toNumsAnyA(u64, a, ldists[1], " ");
     const nd = ldists[1].len - std.mem.replace(u8, ldists[1], " ", "", &buf);
-    const d2 = try aoc.toNum(usize, buf[0..nd]);
+    const d2 = try aoc.toNum(u64, buf[0..nd]);
 
     var score1: u64 = 1;
     for (times, dists) |t, d| {
