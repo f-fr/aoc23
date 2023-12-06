@@ -3,12 +3,9 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 fn solve(t: u64, d: u64) u64 {
+    const b = @sqrt(@as(f64, @floatFromInt(t * t - d * 4)));
     const tt: f64 = @floatFromInt(t);
-    const dd: f64 = @floatFromInt(d);
-    const a = tt / 2;
-    const b = @sqrt(tt * tt / 4 - dd);
-
-    return @intFromFloat(@floor(a + b - 1e-6) - @ceil(a - b + 1e-6) + 1);
+    return @intFromFloat(@floor((tt + b) / 2 - 1e-6) - @ceil((tt - b) / 2 + 1e-6) + 1);
 }
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
