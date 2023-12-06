@@ -27,7 +27,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const nd = ldists[1].len - std.mem.replace(u8, ldists[1], " ", "", &buf);
     const d2 = try aoc.toNum(usize, buf[0..nd]);
 
-    var score1: usize = 1;
+    var score1: u64 = 1;
     for (times, dists) |t, d| score1 *= solve(t, d);
 
     const score2 = solve(t2, d2);

@@ -3,7 +3,7 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 fn solve(t: u64, d: u64) u64 {
-    var l: usize = 0;
+    var l: u64 = 0;
     var r = t / 2 + 1;
 
     while (l + 1 < r) {
@@ -45,7 +45,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const nd = ldists[1].len - std.mem.replace(u8, ldists[1], " ", "", &buf);
     const d2 = try aoc.toNum(usize, buf[0..nd]);
 
-    var score1: usize = 1;
+    var score1: u64 = 1;
     for (times, dists) |t, d| {
         score1 *= solve(t, d);
     }
