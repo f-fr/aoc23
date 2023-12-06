@@ -3,30 +3,17 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 fn solve(t: u64, d: u64) u64 {
+    // binary search for (l,r] with l <  d ≤ r
+    // note that l > r is allowed (and corresponds to [r,l))!!!
     var l: u64 = 0;
-    var r = t / 2 + 1;
+    var r = t / 2;
 
     while (l + 1 < r) {
         const m = (l + r) / 2;
-        if (m * (t - m) <= d)
-            l = m
-        else
-            r = m;
+        if (m * (t - m) <= d) l = m else r = m;
     }
-    const min = r;
 
-    l = t / 2 - 1;
-    r = t;
-    while (l + 1 < r) {
-        const m = (l + r) / 2;
-        if (m * (t - m) <= d)
-            r = m
-        else
-            l = m;
-    }
-    const max = l;
-
-    return max - min + 1;
+    return t - 2 * r + 1;
 }
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
@@ -46,9 +33,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const d2 = try aoc.toNum(u64, buf[0..nd]);
 
     var score1: u64 = 1;
-    for (times, dists) |t, d| {
-        score1 *= solve(t, d);
-    }
+    for (times, dists) |t, d| score1 *= solve(t, d);
 
     const score2 = solve(t2, d2);
 
