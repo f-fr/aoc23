@@ -92,11 +92,11 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         try bids.append(.{ .hand = hands[0], .handj = hands[1], .bid = bid });
     }
 
-    std.mem.sort(Bid, bids.items, {}, Bid.lessThan);
+    std.mem.sortUnstable(Bid, bids.items, {}, Bid.lessThan);
     var score1: u64 = 0;
     for (bids.items, 1..) |b, rank| score1 += b.bid * rank;
 
-    std.mem.sort(Bid, bids.items, {}, Bid.lessThanJ);
+    std.mem.sortUnstable(Bid, bids.items, {}, Bid.lessThanJ);
     var score2: u64 = 0;
     for (bids.items, 1..) |b, rank| score2 += b.bid * rank;
 

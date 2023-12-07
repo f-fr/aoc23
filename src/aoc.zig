@@ -304,5 +304,5 @@ test "toFloats" {
 }
 
 pub fn sort(comptime T: type, items: []T) void {
-    std.mem.sort(T, items, {}, std.sort.asc(T));
+    std.mem.sortUnstable(T, items, {}, std.sort.asc(T));
 }

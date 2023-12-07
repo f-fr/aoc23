@@ -50,7 +50,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         n += 1;
     }
 
-    std.mem.sort(Rng, ranges[0..n], {}, Rng.lessThan);
+    std.mem.sortUnstable(Rng, ranges[0..n], {}, Rng.lessThan);
     // fill gap ranges
     var allranges = try a.alloc(Rng, n * 2 + nsteps);
     var m: usize = 0;
@@ -90,7 +90,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
         var k: usize = 0;
         for (1..nsteps + 1) |idx| {
-            std.mem.sort(Inv, invs.items, {}, Inv.lessThan);
+            std.mem.sortUnstable(Inv, invs.items, {}, Inv.lessThan);
             // compress successive intervals
             var skip: usize = 0;
             for (1..invs.items.len) |j| {
