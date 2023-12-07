@@ -29,19 +29,21 @@ fn handKind(cards: *[5]Card) struct { kind: Card, mostcommon: Card } {
             max = counts[c];
             mostcommon = c;
         }
-        if (counts[c] == 2) npairs += 1;
+        npairs += @intFromBool(counts[c] == 2);
     }
 
     // don't forget the J=11
     max = @max(max, counts[11]);
 
-    const kind: Card = switch (max) {
-        5 => 7, // 5 of a kind
-        4 => 6, // 4 of a kind
-        3 => 4 + @as(Card, @intFromBool(npairs == 2)), // full house or three of a kind
-        2 => 2 + @as(Card, @intFromBool(npairs == 2)), // one or two pairs
-        else => 1, // high card
-    };
+    const kind = max + @intFromBool(max >= 4) + @intFromBool(max >= 3) + @intFromBool(max <= 3 and npairs == 2);
+
+    // const kind: Card = switch (max) {
+    //     5 => 7, // 5 of a kind
+    //     4 => 6, // 4 of a kind
+    //     3 => 4 + @as(Card, @intFromBool(npairs == 2)), // full house or three of a kind
+    //     2 => 2 + @as(Card, @intFromBool(npairs == 2)), // one or two pairs
+    //     else => 1, // high card
+    // };
 
     return .{ .kind = kind, .mostcommon = mostcommon };
 }
@@ -90,9 +92,9 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     var bids = try std.ArrayList(Bid).initCapacity(a, 1000);
 
     while (try lines.next()) |line| {
-        const parts = try aoc.splitN(2, line, " ");
-        const hands = try readHand(parts[0]);
-        const bid = try aoc.toNum(u32, parts[1]);
+        const pos = std.mem.indexOfScalar(u8, line, ' ') orelse break;
+        const hands = try readHand(line[0..pos]);
+        const bid = try aoc.toNum(u32, line[pos + 1 ..]);
         try bids.append(.{ .hand = hands[0], .handj = hands[1], .bid = bid });
     }
 
