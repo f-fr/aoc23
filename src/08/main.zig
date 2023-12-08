@@ -41,6 +41,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
     var scores = [2]u64{ 0, 0 };
     var us = try std.ArrayList(u32).initCapacity(a, nodes.count());
+
     const ends = try a.alloc(bool, nodes.count());
     const lens = try a.alloc(u32, nodes.count());
     for (0..2) |part| {
@@ -74,7 +75,9 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             lens[start] = cnt;
         }
 
-        // compute lcm of all lens
+        // Compute lcm of all lengths.
+        // This is actually not correct (a general solution requires
+        // the CRT and a bit more math)
         scores[part] = 1;
         for (lens) |l| {
             if (l != 0) scores[part] = lcm(scores[part], l);
