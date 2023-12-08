@@ -166,9 +166,11 @@ fn genSplitN(comptime N: usize, s: []const u8, separator: []const u8, comptime t
         i += 1;
         if (i + 1 == N) break;
     }
-    result[N - 1] = toks.rest();
-    // there should be a last element (even if we ignore it because we have the "rest")
-    if (toks.next() == null) return SplitErr.TooFewElementsForSplit;
+    result[i] = toks.rest();
+    i += 1;
+    while (i < N) : (i += 1) {
+        result[i] = "";
+    }
 
     return result;
 }
@@ -184,7 +186,7 @@ pub fn splitAnyN(comptime N: usize, s: []const u8, separator: []const u8) ![N][]
 test "splitN" {
     for (try splitN(6, "A B C D E F", " "), [_][]const u8{ "A", "B", "C", "D", "E", "F" }) |a, b| try testing.expectEqualSlices(u8, a, b);
     for (try splitN(6, "A B C D E F G", " "), [_][]const u8{ "A", "B", "C", "D", "E", "F G" }) |a, b| try testing.expectEqualSlices(u8, a, b);
-    try testing.expectError(error.TooFewElementsForSplit, splitN(6, "A B C D E", " "));
+    for (try splitN(6, "A B C D E", " "), [_][]const u8{ "A", "B", "C", "D", "E", "" }) |a, b| try testing.expectEqualSlices(u8, a, b);
 }
 
 pub fn toNum(comptime T: type, s: []const u8) !T {
