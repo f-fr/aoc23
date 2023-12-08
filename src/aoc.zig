@@ -308,3 +308,86 @@ test "toFloats" {
 pub fn sort(comptime T: type, items: []T) void {
     std.mem.sortUnstable(T, items, {}, std.sort.asc(T));
 }
+
+/// least common multiple
+pub fn lcm(a: u64, b: u64) u64 {
+    return a * (b / std.math.gcd(a, b));
+}
+
+/// Extended version of Euclid's algorithm.
+///
+/// Returns s and t such that s*a+t*b=gcd.
+pub fn gcd_ext(a: i64, b: i64) struct { gcd: i64, s: i64, t: i64 } {
+    var r0 = a;
+    var r1 = b;
+    var s0: i64 = 1;
+    var s1: i64 = 0;
+    var t0: i64 = 0;
+    var t1: i64 = 1;
+    while (r1 != 0) {
+        const q = @divFloor(r0, r1);
+        const r2 = @rem(r0, r1);
+        if (r2 != r0 - q * r1) unreachable;
+        const s2 = s0 - q * s1;
+        const t2 = t0 - q * t1;
+
+        r0 = r1;
+        r1 = r2;
+        s0 = s1;
+        s1 = s2;
+        t0 = t1;
+        t1 = t2;
+    }
+
+    if (s0 * a + t0 * b != r0) unreachable;
+
+    return .{ .gcd = r0, .s = s0, .t = t0 };
+}
+
+pub const Crt = struct { a: u64, m: u64 };
+
+pub fn crt(eqs: []const Crt) ?u64 {
+    if (eqs.len == 0) return null;
+    if (eqs.len == 1) return eqs[0].a;
+
+    var a0: i64 = @intCast(eqs[0].a);
+    var m0: i64 = @intCast(eqs[0].m);
+    for (1..eqs.len) |i| {
+        const a1: i64 = @intCast(eqs[i].a);
+        const m1: i64 = @intCast(eqs[i].m);
+        const gcd = gcd_ext(m0, m1);
+        if (@rem(a0, gcd.gcd) != @rem(a1, gcd.gcd)) return null;
+        const l = m0 * @divFloor(m1, gcd.gcd);
+        const x = @rem(l + a0 - gcd.s * m0 * @divFloor(a0 - a1, gcd.gcd), l);
+        a0 = x;
+        m0 = l;
+    }
+
+    return @intCast(a0);
+}
+
+test "crt" {
+    try std.testing.expectEqual(@as(?u64, 301), //
+        crt(&.{
+        .{ .a = 1, .m = 2 },
+        .{ .a = 1, .m = 3 },
+        .{ .a = 1, .m = 4 },
+        .{ .a = 1, .m = 5 },
+        .{ .a = 1, .m = 6 },
+        .{ .a = 0, .m = 7 },
+    }));
+
+    try std.testing.expectEqual(@as(?u64, 47), //
+        crt(&.{
+        .{ .a = 2, .m = 3 },
+        .{ .a = 3, .m = 4 },
+        .{ .a = 2, .m = 5 },
+    }));
+
+    try std.testing.expectEqual(@as(?u64, 23), //
+        crt(&.{
+        .{ .a = 2, .m = 3 },
+        .{ .a = 3, .m = 5 },
+        .{ .a = 2, .m = 7 },
+    }));
+}
