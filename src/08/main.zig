@@ -13,10 +13,6 @@ fn addNode(a: std.mem.Allocator, nodes: *NodesMap, node: []const u8) !u32 {
     return r.value_ptr.*;
 }
 
-fn lcm(a: u64, b: u64) u64 {
-    return a * (b / std.math.gcd(a, b));
-}
-
 pub fn run(lines: *aoc.Lines) ![2]u64 {
     var arena = std.heap.ArenaAllocator.init(aoc.allocator);
     defer arena.deinit();
@@ -80,7 +76,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         // the CRT and a bit more math)
         scores[part] = 1;
         for (lens) |l| {
-            if (l != 0) scores[part] = lcm(scores[part], l);
+            if (l != 0) scores[part] = aoc.lcm(scores[part], l);
         }
     }
 
