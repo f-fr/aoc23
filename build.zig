@@ -149,9 +149,9 @@ pub fn build(b: *std.Build) !void {
         \\        t_total += t;
         \\
         \\        if (day.version.len == 0)
-        \\            aoc.println("Day {d:0>2}   : {d:.3} -- part 1: {d: >10}   part 2: {d: >10}", .{day.day, t, s[0], s[1]})
+        \\            aoc.println("Day {d:0>2}   : {d:.3} -- part 1: {d: >10}   part 2: {d: >14}", .{day.day, t, s[0], s[1]})
         \\        else
-        \\            aoc.println("Day {d:0>2} v{s}: {d:.3} -- part 1: {d: >10}   part 2: {d: >10}", .{day.day, day.version, t, s[0], s[1]});
+        \\            aoc.println("Day {d:0>2} v{s}: {d:.3} -- part 1: {d: >10}   part 2: {d: >14}", .{day.day, day.version, t, s[0], s[1]});
         \\    }
         \\    aoc.println("Total time: {d:.3}", .{t_total});
         \\}
