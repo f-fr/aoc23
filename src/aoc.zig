@@ -15,6 +15,8 @@ pub const SplitErr = error{
     TooFewElementsForSplit,
 };
 
+pub const Pos = struct { i: usize, j: usize };
+
 pub const Grid = struct {
     /// Number of rows
     n: usize,
@@ -36,6 +38,14 @@ pub const Grid = struct {
     /// Return a slice to the ith row.
     pub fn row(grid: *const Grid, i: usize) []u8 {
         return grid.data[grid.m * i .. grid.m * i + grid.m];
+    }
+
+    pub fn findFirst(grid: *const Grid, ch: u8) ?Pos {
+        if (std.mem.indexOfScalar(u8, grid.data, ch)) |off| {
+            return .{ .i = off / grid.m, .j = off % grid.m };
+        }
+
+        return null;
     }
 
     pub fn setAll(grid: *Grid, c: u8) void {
