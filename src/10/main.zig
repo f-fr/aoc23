@@ -48,7 +48,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     for ([_]Dir{ .north, .west, .south, .east }) |sdir| {
         loop.setAll('.');
         var p = step(s, sdir);
-        const cs = grid.at(p.i, p.j);
+        const cs = grid.atPos(p);
         switch (sdir) {
             .north => switch (cs) {
                 '|', 'F', '7' => {},
@@ -70,9 +70,9 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
         var dir = sdir;
         var cnt: usize = 0;
-        while (p.i != s.i or p.j != s.j) {
-            const c = grid.at(p.i, p.j);
-            loop.set(p.i, p.j, c);
+        while (!p.eql(s)) {
+            const c = grid.atPos(p);
+            loop.setPos(p, c);
             const nxt_dir: Dir = switch (dir) {
                 .north => switch (c) {
                     '|' => .north,
@@ -103,7 +103,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             dir = nxt_dir;
             cnt += 1;
         } else {
-            loop.set(s.i, s.j, tile(sdir, dir) orelse unreachable);
+            loop.setPos(s, tile(sdir, dir) orelse unreachable);
             score1 = (cnt + 1) / 2;
             break;
         }
