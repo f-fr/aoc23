@@ -1,6 +1,7 @@
 // Advent of code 23 - day 10
 const std = @import("std");
 const aoc = @import("aoc");
+const debug = @import("builtin").mode == .Debug;
 
 const Dir = enum { north, west, south, east };
 const Pos = struct { i: usize, j: usize };
@@ -124,7 +125,10 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             var onpipe: u8 = '.';
             for (0..loop.m) |j| {
                 switch (loop.at(i, j)) {
-                    '.' => cnt_in += @intFromBool(in and onpipe == '.'),
+                    '.' => {
+                        cnt_in += @intFromBool(in and onpipe == '.');
+                        if (debug and in and onpipe == '.') loop.set(i, j, '*');
+                    },
                     '|' => in = !in,
                     'L' => onpipe = 'L',
                     'F' => onpipe = 'F',
@@ -143,6 +147,25 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         }
 
         score2 = cnt_in;
+
+        if (debug) {
+            for (0..loop.n) |i| {
+                for (0..loop.m) |j| {
+                    const c = switch (loop.at(i, j)) {
+                        '-' => "─",
+                        '|' => "│",
+                        '7' => "┐",
+                        'F' => "┌",
+                        'J' => "┘",
+                        'L' => "└",
+                        '*' => "█",
+                        else => " ",
+                    };
+                    std.debug.print("{s}", .{c});
+                }
+                std.debug.print("\n", .{});
+            }
+        }
 
         break;
     }
