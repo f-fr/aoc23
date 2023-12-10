@@ -15,7 +15,14 @@ pub const SplitErr = error{
     TooFewElementsForSplit,
 };
 
-pub const Pos = struct { i: usize, j: usize };
+pub const Pos = struct {
+    i: usize,
+    j: usize,
+
+    pub fn eql(a: Pos, b: Pos) bool {
+        return a.i == b.i and a.j == b.j;
+    }
+};
 
 pub const Grid = struct {
     /// Number of rows
@@ -33,6 +40,10 @@ pub const Grid = struct {
     /// Return the character at position (i, j)
     pub fn at(grid: *const Grid, i: usize, j: usize) u8 {
         return grid.data[grid.offset(i, j)];
+    }
+
+    pub fn atPos(grid: *const Grid, p: Pos) u8 {
+        return grid.at(p.i, p.j);
     }
 
     /// Return a slice to the ith row.
@@ -54,6 +65,10 @@ pub const Grid = struct {
 
     pub fn set(grid: *Grid, i: usize, j: usize, c: u8) void {
         grid.data[grid.offset(i, j)] = c;
+    }
+
+    pub fn setPos(grid: *Grid, p: Pos, c: u8) void {
+        grid.set(p.i, p.j, c);
     }
 
     pub fn dupe(grid: *const Grid, alloc: std.mem.Allocator) !Grid {
