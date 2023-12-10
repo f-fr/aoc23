@@ -112,7 +112,8 @@ pub const Lines = struct {
             if (m == 0) {
                 m = line.len + 2;
                 try data.appendNTimes(boundary, m);
-            }
+            } else if (m != line.len + 2)
+                return error.InvalidRowLength;
             try data.append(boundary);
             try data.appendSlice(line);
             try data.append(boundary);
