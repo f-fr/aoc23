@@ -3,18 +3,7 @@ const std = @import("std");
 const aoc = @import("aoc");
 const debug = @import("builtin").mode == .Debug;
 
-const Dir = enum { north, west, south, east };
-
-fn step(p: aoc.Pos, dir: Dir) aoc.Pos {
-    return switch (dir) {
-        .north => .{ .i = p.i - 1, .j = p.j },
-        .west => .{ .i = p.i, .j = p.j - 1 },
-        .south => .{ .i = p.i + 1, .j = p.j },
-        .east => .{ .i = p.i, .j = p.j + 1 },
-    };
-}
-
-fn tile(d1: Dir, d2: Dir) ?u8 {
+fn tile(d1: aoc.Dir, d2: aoc.Dir) ?u8 {
     if (d1 == .north and d2 == .north) return '|';
     if (d1 == .north and d2 == .west) return 'L';
     if (d1 == .north and d2 == .east) return 'J';
@@ -45,9 +34,9 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const s = grid.findFirst('S') orelse return error.NoStart;
 
     var score1: usize = 0;
-    for ([_]Dir{ .north, .west, .south, .east }) |sdir| {
+    for (aoc.Dirs) |sdir| {
         loop.setAll('.');
-        var p = step(s, sdir);
+        var p = s.step(sdir);
         const cs = grid.atPos(p);
         switch (sdir) {
             .north => switch (cs) {
@@ -73,7 +62,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         while (!p.eql(s)) {
             const c = grid.atPos(p);
             loop.setPos(p, c);
-            const nxt_dir: Dir = switch (dir) {
+            const nxt_dir: aoc.Dir = switch (dir) {
                 .north => switch (c) {
                     '|' => .north,
                     '7' => .west,
@@ -99,7 +88,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
                     else => break,
                 },
             };
-            p = step(p, nxt_dir);
+            p = p.step(nxt_dir);
             dir = nxt_dir;
             cnt += 1;
         } else {
