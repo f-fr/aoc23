@@ -55,8 +55,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const s = find(&grid, 'S') orelse return error.NoStart;
 
     var score1: usize = 0;
-    var score2: usize = 0;
-    sdir: for ([_]Dir{ .north, .west, .south, .east }) |sdir| {
+    for ([_]Dir{ .north, .west, .south, .east }) |sdir| {
         loop.setAll('.');
         var p: Pos = step(s, sdir);
         const cs = grid.at(p.i, p.j);
@@ -89,85 +88,80 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
                     '|' => .north,
                     '7' => .west,
                     'F' => .east,
-                    else => continue :sdir,
+                    else => break,
                 },
                 .west => switch (c) {
                     '-' => .west,
                     'F' => .south,
                     'L' => .north,
-                    else => continue :sdir,
+                    else => break,
                 },
                 .south => switch (c) {
                     '|' => .south,
                     'J' => .west,
                     'L' => .east,
-                    else => continue :sdir,
+                    else => break,
                 },
                 .east => switch (c) {
                     '-' => .east,
                     '7' => .south,
                     'J' => .north,
-                    else => continue :sdir,
+                    else => break,
                 },
             };
             p = step(p, nxt_dir);
             dir = nxt_dir;
             cnt += 1;
+        } else {
+            loop.set(s.i, s.j, tile(sdir, dir) orelse unreachable);
+            score1 = (cnt + 1) / 2;
+            break;
         }
+    }
 
-        loop.set(s.i, s.j, tile(sdir, dir) orelse unreachable);
+    var score2: usize = 0;
+    for (0..loop.n) |i| {
+        var in = false;
+        var onpipe: u8 = '.';
+        for (loop.row(i), 0..) |c, j| {
+            switch (c) {
+                '.' => {
+                    score2 += @intFromBool(in and onpipe == '.');
+                    if (debug and in and onpipe == '.') loop.set(i, j, '*');
+                },
+                '|' => in = !in,
+                'L', 'F' => onpipe = c,
+                '7' => {
+                    in = in != (onpipe == 'L');
+                    onpipe = '.';
+                },
+                'J' => {
+                    in = in != (onpipe == 'F');
+                    onpipe = '.';
+                },
+                '-' => if (onpipe == '.') unreachable,
+                else => unreachable,
+            }
+        }
+    }
 
-        score1 = (cnt + 1) / 2;
-
-        var cnt_in: usize = 0;
+    if (debug) {
         for (0..loop.n) |i| {
-            var in = false;
-            var onpipe: u8 = '.';
             for (0..loop.m) |j| {
-                switch (loop.at(i, j)) {
-                    '.' => {
-                        cnt_in += @intFromBool(in and onpipe == '.');
-                        if (debug and in and onpipe == '.') loop.set(i, j, '*');
-                    },
-                    '|' => in = !in,
-                    'L' => onpipe = 'L',
-                    'F' => onpipe = 'F',
-                    '7' => {
-                        if (onpipe == 'L') in = !in;
-                        onpipe = '.';
-                    },
-                    'J' => {
-                        if (onpipe == 'F') in = !in;
-                        onpipe = '.';
-                    },
-                    '-' => if (onpipe == '.') unreachable,
-                    else => unreachable,
-                }
+                const c = switch (loop.at(i, j)) {
+                    '-' => "─",
+                    '|' => "│",
+                    '7' => "┐",
+                    'F' => "┌",
+                    'J' => "┘",
+                    'L' => "└",
+                    '*' => "█",
+                    else => " ",
+                };
+                std.debug.print("{s}", .{c});
             }
+            std.debug.print("\n", .{});
         }
-
-        score2 = cnt_in;
-
-        if (debug) {
-            for (0..loop.n) |i| {
-                for (0..loop.m) |j| {
-                    const c = switch (loop.at(i, j)) {
-                        '-' => "─",
-                        '|' => "│",
-                        '7' => "┐",
-                        'F' => "┌",
-                        'J' => "┘",
-                        'L' => "└",
-                        '*' => "█",
-                        else => " ",
-                    };
-                    std.debug.print("{s}", .{c});
-                }
-                std.debug.print("\n", .{});
-            }
-        }
-
-        break;
     }
 
     return .{ score1, score2 };
