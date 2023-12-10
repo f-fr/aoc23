@@ -79,6 +79,25 @@ pub const Lines = struct {
         }
     }
 
+    /// Read the whole file as a grid.
+    pub fn readGrid(self: *Lines, alloc: std.mem.Allocator) !Grid {
+        var data = std.ArrayList(u8).init(alloc);
+        defer data.deinit();
+
+        var n: usize = 0;
+        var m: usize = 0;
+        while (try self.next()) |line| {
+            if (m == 0)
+                m = line.len
+            else if (m != line.len)
+                return error.InvalidRowLength;
+            try data.appendSlice(line);
+            n += 1;
+        }
+
+        return .{ .n = n, .m = m, .data = try data.toOwnedSlice() };
+    }
+
     /// Read the whole file as a grid and add an additional boundary
     /// character `boundary` around the field.
     ///
