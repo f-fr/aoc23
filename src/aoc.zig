@@ -37,6 +37,22 @@ pub const Grid = struct {
     pub fn row(grid: *const Grid, i: usize) []u8 {
         return grid.data[grid.m * i .. grid.m * i + grid.m];
     }
+
+    pub fn setAll(grid: *Grid, c: u8) void {
+        @memset(grid.data, c);
+    }
+
+    pub fn set(grid: *Grid, i: usize, j: usize, c: u8) void {
+        grid.data[grid.offset(i, j)] = c;
+    }
+
+    pub fn dupe(grid: *const Grid, alloc: std.mem.Allocator) !Grid {
+        return Grid{
+            .n = grid.n,
+            .m = grid.m,
+            .data = try alloc.dupe(u8, grid.data),
+        };
+    }
 };
 
 pub const Lines = struct {
