@@ -103,9 +103,11 @@ pub const Lines = struct {
         var n: usize = 0;
         var m: usize = 0;
         while (try self.next()) |line| {
-            if (m == 0)
-                m = line.len
-            else if (m != line.len)
+            if (m == 0) {
+                m = line.len;
+                // assume that the grid is quadratic
+                try data.ensureTotalCapacity(m * m);
+            } else if (m != line.len)
                 return error.InvalidRowLength;
             try data.appendSlice(line);
             n += 1;
@@ -127,6 +129,8 @@ pub const Lines = struct {
         while (try self.next()) |line| {
             if (m == 0) {
                 m = line.len + 2;
+                // assume that the grid is quadratic
+                try data.ensureTotalCapacity(m * m);
                 try data.appendNTimes(boundary, m);
             } else if (m != line.len + 2)
                 return error.InvalidRowLength;
