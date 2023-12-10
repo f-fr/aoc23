@@ -4,18 +4,8 @@ const aoc = @import("aoc");
 const debug = @import("builtin").mode == .Debug;
 
 const Dir = enum { north, west, south, east };
-const Pos = struct { i: usize, j: usize };
 
-fn find(grid: *const aoc.Grid, ch: u8) ?Pos {
-    for (0..grid.n) |i| {
-        for (0..grid.m) |j| {
-            if (grid.at(i, j) == ch) return .{ .i = i, .j = j };
-        }
-    }
-    return null;
-}
-
-fn step(p: Pos, dir: Dir) Pos {
+fn step(p: aoc.Pos, dir: Dir) aoc.Pos {
     return switch (dir) {
         .north => .{ .i = p.i - 1, .j = p.j },
         .west => .{ .i = p.i, .j = p.j - 1 },
@@ -52,12 +42,12 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const grid = try lines.readGridWithBoundary(a, '.');
     var loop = try grid.dupe(a);
 
-    const s = find(&grid, 'S') orelse return error.NoStart;
+    const s = grid.findFirst('S') orelse return error.NoStart;
 
     var score1: usize = 0;
     for ([_]Dir{ .north, .west, .south, .east }) |sdir| {
         loop.setAll('.');
-        var p: Pos = step(s, sdir);
+        var p = step(s, sdir);
         const cs = grid.at(p.i, p.j);
         switch (sdir) {
             .north => switch (cs) {
