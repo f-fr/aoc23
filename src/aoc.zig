@@ -15,12 +15,24 @@ pub const SplitErr = error{
     TooFewElementsForSplit,
 };
 
+pub const Dir = enum { north, west, south, east };
+pub const Dirs = std.enums.values(Dir);
+
 pub const Pos = struct {
     i: usize,
     j: usize,
 
     pub fn eql(a: Pos, b: Pos) bool {
         return a.i == b.i and a.j == b.j;
+    }
+
+    pub fn step(p: Pos, dir: Dir) Pos {
+        return switch (dir) {
+            .north => .{ .i = p.i - 1, .j = p.j },
+            .west => .{ .i = p.i, .j = p.j - 1 },
+            .south => .{ .i = p.i + 1, .j = p.j },
+            .east => .{ .i = p.i, .j = p.j + 1 },
+        };
     }
 };
 
