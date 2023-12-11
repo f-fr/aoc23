@@ -50,8 +50,8 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             inline for (0..2, .{ 2, 1_000_000 }) |part, factor| {
                 const x1 = galaxies.items[k - 1][i];
                 const x2 = galaxies.items[k][i];
-                const y1: u64 = @as(u64, @intCast(x1)) + counts[x1] * (factor - 1);
-                const y2: u64 = @as(u64, @intCast(x2)) + counts[x2] * (factor - 1);
+                const y1 = @as(u64, @intCast(x1)) + counts[x1] * (factor - 1);
+                const y2 = @as(u64, @intCast(x2)) + counts[x2] * (factor - 1);
 
                 scores[part] += (y2 - y1) * k * (l - k);
             }
