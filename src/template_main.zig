@@ -3,6 +3,10 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
+    var arena = std.heap.ArenaAllocator.init(aoc.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+
     while (try lines.next()) |line| {
         _ = line;
         // TODO
