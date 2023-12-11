@@ -34,6 +34,11 @@ pub const Pos = struct {
             .east => .{ .i = p.i, .j = p.j + 1 },
         };
     }
+
+    pub fn dist1(a: Pos, b: Pos) usize {
+        return (if (a.i > b.i) a.i - b.i else b.i - a.i) +
+            (if (a.j > b.j) a.j - b.j else b.j - a.j);
+    }
 };
 
 pub const Grid = struct {
