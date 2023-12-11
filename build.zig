@@ -138,6 +138,8 @@ pub fn build(b: *std.Build) !void {
     try gen_w.writeAll(
         \\pub fn main() !void {
         \\    var t_total: f64 = 0;
+        \\    var t_day: f64 = 0;
+        \\    var cur_day: usize = 0;
         \\    inline for (days) |day| {
         \\        var lines = try aoc.Lines.init(day.filename);
         \\        defer lines.deinit();
@@ -146,14 +148,20 @@ pub fn build(b: *std.Build) !void {
         \\        const s = try day.run(&lines);
         \\        const t_end = std.time.milliTimestamp();
         \\        const t = @as(f64, @floatFromInt(t_end - t_start)) / 1000.0;
-        \\        t_total += t;
+        \\        if (cur_day != day.day) {
+        \\            t_total += t_day;
+        \\            t_day = t;
+        \\        }
+        \\        else t_day = @min(t_day, t);
+        \\        cur_day = day.day;
         \\
         \\        if (day.version.len == 0)
         \\            aoc.println("Day {d:0>2}   : {d:.3} -- part 1: {d: >10}   part 2: {d: >14}", .{day.day, t, s[0], s[1]})
         \\        else
         \\            aoc.println("Day {d:0>2} v{s}: {d:.3} -- part 1: {d: >10}   part 2: {d: >14}", .{day.day, day.version, t, s[0], s[1]});
         \\    }
-        \\    aoc.println("Total time: {d:.3}", .{t_total});
+        \\    t_total += t_day; // last day
+        \\    aoc.println("Total time (best versions): {d:.3}", .{t_total});
         \\}
     );
 
