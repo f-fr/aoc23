@@ -8,10 +8,10 @@ const State = struct {
 };
 const States = std.AutoArrayHashMap(State, u64);
 
-fn unfold(alloc: std.mem.Allocator, record: []const u8, blocks: []const u8) !struct { []u8, []u8 } {
-    const new_records = try std.mem.join(alloc, "?", &[1][]const u8{record} ** 5);
+fn unfold(comptime N: comptime_int, alloc: std.mem.Allocator, record: []const u8, blocks: []const u8) !struct { []u8, []u8 } {
+    const new_records = try std.mem.join(alloc, "?", &(.{record} ** N));
     errdefer alloc.free(new_records);
-    const new_blocks = try std.mem.join(alloc, "", &[1][]const u8{blocks} ** 5);
+    const new_blocks = try std.mem.join(alloc, "", &(.{blocks} ** N));
     return .{ new_records, new_blocks };
 }
 
@@ -33,7 +33,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         const parts = try aoc.splitN(2, line, " ");
         const single_blocks = try aoc.toNumsA(u8, a, parts[1], ",");
 
-        const unfolded = try unfold(a, parts[0], single_blocks);
+        const unfolded = try unfold(5, a, parts[0], single_blocks);
         defer a.free(unfolded[0]);
         defer a.free(unfolded[1]);
 
