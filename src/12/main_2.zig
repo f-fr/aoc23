@@ -52,18 +52,10 @@ const States = struct {
     }
 };
 
-fn unfold(alloc: std.mem.Allocator, record: []const u8, blocks: []const usize) !struct { []u8, []usize } {
-    var new_records = try alloc.alloc(u8, record.len * 5 + 4);
+fn unfold(alloc: std.mem.Allocator, record: []const u8, blocks: []const u8) !struct { []u8, []u8 } {
+    const new_records = try std.mem.join(alloc, "?", &[1][]const u8{record} ** 5);
     errdefer alloc.free(new_records);
-
-    var new_blocks = try alloc.alloc(usize, blocks.len * 5);
-
-    for (0..5) |i| {
-        if (i > 0) new_records[i + i * record.len - 1] = '?';
-        @memcpy(new_records[i + i * record.len .. i + (i + 1) * record.len], record);
-        @memcpy(new_blocks[i * blocks.len .. (i + 1) * blocks.len], blocks);
-    }
-
+    const new_blocks = try std.mem.join(alloc, "", &[1][]const u8{blocks} ** 5);
     return .{ new_records, new_blocks };
 }
 
@@ -82,7 +74,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     var score2: u64 = 0;
     while (try lines.next()) |line| {
         const parts = try aoc.splitN(2, line, " ");
-        const single_blocks = try aoc.toNumsA(usize, a, parts[1], ",");
+        const single_blocks = try aoc.toNumsA(u8, a, parts[1], ",");
         defer a.free(single_blocks);
 
         const unfolded = try unfold(a, parts[0], single_blocks);
