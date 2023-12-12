@@ -12,18 +12,9 @@ const MaxBlockSize = 20;
 const States = struct {
     generation: u32 = 1,
     counts: [MaxBlocks][MaxBlockSize]u64 = undefined,
-    gens: [MaxBlocks][MaxBlockSize]u32,
+    gens: [MaxBlocks][MaxBlockSize]u32 = .{.{0} ** MaxBlockSize} ** MaxBlocks,
     active: [MaxBlocks * MaxBlockSize]State = undefined,
     nactive: usize = 0,
-
-    fn init() States {
-        var gens: [MaxBlocks][MaxBlockSize]u32 = undefined;
-        for (0..MaxBlocks) |i| {
-            for (0..MaxBlockSize) |j|
-                gens[i][j] = 0;
-        }
-        return .{ .gens = gens };
-    }
 
     fn clearRetainingCapacity(self: *States) void {
         self.generation += 1;
@@ -64,8 +55,8 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     defer arena.deinit();
     const a = arena.allocator();
 
-    var states1 = States.init();
-    var states2 = States.init();
+    var states1 = States{};
+    var states2 = States{};
 
     var cur_states = &states1;
     var nxt_states = &states2;
