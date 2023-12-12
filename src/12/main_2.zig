@@ -3,8 +3,8 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 const State = struct {
-    idx: usize,
-    pos: usize,
+    idx: u8,
+    pos: u8,
 };
 
 const MaxBlocks = 31;
@@ -30,7 +30,7 @@ const States = struct {
         return self.counts[st.idx][st.pos];
     }
 
-    fn addState(self: *States, idx: usize, pos: usize, cnt: u64) void {
+    fn addState(self: *States, idx: u8, pos: u8, cnt: u64) void {
         const st = State{ .idx = idx, .pos = pos };
         if (self.gens[st.idx][st.pos] == self.generation) {
             self.counts[st.idx][st.pos] += cnt;
@@ -100,7 +100,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             }
 
             if (i == parts[0].len) {
-                const m = single_blocks.len;
+                const m: u8 = @intCast(single_blocks.len);
                 score1 += cur_states.get(.{ .idx = m, .pos = 0 }) orelse 0;
                 score1 += cur_states.get(.{ .idx = m - 1, .pos = blocks[m - 1] }) orelse 0;
             }
@@ -108,7 +108,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             std.mem.swap(*States, &cur_states, &nxt_states);
         }
 
-        const m = blocks.len;
+        const m: u8 = @intCast(blocks.len);
         score2 += cur_states.get(.{ .idx = m, .pos = 0 }) orelse 0;
         score2 += cur_states.get(.{ .idx = m - 1, .pos = blocks[m - 1] }) orelse 0;
     }

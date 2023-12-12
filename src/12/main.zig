@@ -3,8 +3,8 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 const State = struct {
-    idx: usize,
-    pos: usize,
+    idx: u8,
+    pos: u8,
 };
 const States = std.AutoArrayHashMap(State, u64);
 
@@ -15,7 +15,7 @@ fn unfold(comptime N: comptime_int, alloc: std.mem.Allocator, record: []const u8
     return .{ new_records, new_blocks };
 }
 
-fn addState(states: *States, idx: usize, pos: usize, cnt: u64) !void {
+fn addState(states: *States, idx: u8, pos: u8, cnt: u64) !void {
     (try states.getOrPutValue(.{ .idx = idx, .pos = pos }, 0)).value_ptr.* += cnt;
 }
 
@@ -74,7 +74,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             }
 
             if (i == parts[0].len) {
-                const m = single_blocks.len;
+                const m: u8 = @intCast(single_blocks.len);
                 if (cur_states.get(.{ .idx = m, .pos = 0 })) |n| {
                     score1 += n;
                 }
@@ -86,10 +86,11 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             std.mem.swap(States, &cur_states, &nxt_states);
         }
 
-        if (cur_states.get(.{ .idx = blocks.len, .pos = 0 })) |n| {
+        const m: u8 = @intCast(blocks.len);
+        if (cur_states.get(.{ .idx = m, .pos = 0 })) |n| {
             score2 += n;
         }
-        if (cur_states.get(.{ .idx = blocks.len - 1, .pos = blocks[blocks.len - 1] })) |n| {
+        if (cur_states.get(.{ .idx = m - 1, .pos = blocks[m - 1] })) |n| {
             score2 += n;
         }
     }
