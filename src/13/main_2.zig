@@ -6,7 +6,7 @@ fn middleOfPalindrome(nums: []const u32) @Vector(2, usize) {
     var pos0: usize = 0;
     var pos1: usize = 0;
     for (1..nums.len) |i| {
-        var cnt_diff: usize = 0;
+        var have_diff = false;
         for (0..@min(i, nums.len - i)) |k| {
             const diff = nums[i - k - 1] ^ nums[i + k];
             const lz = @clz(diff);
@@ -15,13 +15,13 @@ fn middleOfPalindrome(nums: []const u32) @Vector(2, usize) {
                 // both are equal
             } else if (lz + tz == 31) {
                 // exactly one bit
-                if (cnt_diff > 0) break;
-                cnt_diff += 1;
+                if (have_diff) break;
+                have_diff = true;
             } else {
                 break;
             }
         } else {
-            if (cnt_diff == 0)
+            if (!have_diff)
                 pos0 = i
             else
                 pos1 = i;
