@@ -2,6 +2,8 @@
 const std = @import("std");
 const aoc = @import("aoc");
 
+const V = @Vector(2, i8);
+
 fn score(grid: *const aoc.Grid) u64 {
     var s: usize = 0;
     for (1..grid.n - 1) |i| {
@@ -12,38 +14,50 @@ fn score(grid: *const aoc.Grid) u64 {
     return s;
 }
 
+fn at(grid: *const aoc.Grid, pos: V) u8 {
+    const i: usize = @intCast(pos[0]);
+    const j: usize = @intCast(pos[1]);
+    return grid.at(i, j);
+}
+
+fn set(grid: *aoc.Grid, pos: V, c: u8) void {
+    const i: usize = @intCast(pos[0]);
+    const j: usize = @intCast(pos[1]);
+    return grid.set(i, j, c);
+}
+
 fn tilt(grid: *aoc.Grid, dir: aoc.Dir) void {
-    var start: aoc.Pos = undefined;
-    var dir_step: aoc.Dir = undefined;
-    var dir_next: aoc.Dir = undefined;
+    var start: V = undefined;
+    var dir_step: V = undefined;
+    var dir_next: V = undefined;
     var n: usize = undefined;
     var m: usize = undefined;
     switch (dir) {
         .north => {
-            start = .{ .i = 1, .j = 1 };
-            dir_step = .south;
-            dir_next = .east;
+            start = .{ 1, 1 };
+            dir_step = .{ 1, 0 };
+            dir_next = .{ 0, 1 };
             n = grid.n - 2;
             m = grid.m - 2;
         },
         .west => {
-            start = .{ .i = 1, .j = 1 };
-            dir_step = .east;
-            dir_next = .south;
+            start = .{ 1, 1 };
+            dir_step = .{ 0, 1 };
+            dir_next = .{ 1, 0 };
             n = grid.m - 2;
             m = grid.n - 2;
         },
         .south => {
-            start = .{ .i = grid.n - 2, .j = 1 };
-            dir_step = .north;
-            dir_next = .east;
+            start = .{ @intCast(grid.n - 2), 1 };
+            dir_step = .{ -1, 0 };
+            dir_next = .{ 0, 1 };
             n = grid.n - 2;
             m = grid.m - 2;
         },
         .east => {
-            start = .{ .i = 1, .j = grid.m - 2 };
-            dir_step = .west;
-            dir_next = .south;
+            start = .{ 1, @intCast(grid.m - 2) };
+            dir_step = .{ 0, -1 };
+            dir_next = .{ 1, 0 };
             n = grid.m - 2;
             m = grid.n - 2;
         },
@@ -53,22 +67,23 @@ fn tilt(grid: *aoc.Grid, dir: aoc.Dir) void {
         var i: usize = 0;
         var pos = start;
         while (i < n) {
-            while (i < n and grid.atPos(pos) == '#') : (i += 1) {
-                pos = pos.step(dir_step);
+            while (i < n and at(grid, pos) == '#') : (i += 1) {
+                pos += dir_step;
             }
-            var ngaps: usize = 0;
-            while (i < n and grid.atPos(pos) != '#') : (i += 1) {
-                if (grid.atPos(pos) == '.') {
+            var ngaps: i8 = 0;
+            while (i < n and at(grid, pos) != '#') : (i += 1) {
+                if (at(grid, pos) == '.') {
                     ngaps += 1;
-                } else {
-                    grid.setPos(pos, '.');
-                    grid.setPos(pos.stepn(dir, ngaps), 'O');
+                } else if (ngaps > 0) {
+                    const to = pos - dir_step * @as(V, @splat(ngaps));
+                    set(grid, pos, '.');
+                    set(grid, to, 'O');
                 }
-                pos = pos.step(dir_step);
+                pos += dir_step;
             }
         }
 
-        start = start.step(dir_next);
+        start += dir_next;
     }
 }
 
