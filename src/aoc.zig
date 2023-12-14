@@ -139,12 +139,18 @@ pub const Lines = struct {
 
     /// Read the whole file as a grid.
     pub fn readGrid(self: *Lines, alloc: std.mem.Allocator) !Grid {
+        return try readNextGrid(self, alloc) orelse error.UnexpectedEndOfFile;
+    }
+
+    /// Read the next lines of a file (until an empty line or eof) as a grid.
+    pub fn readNextGrid(self: *Lines, alloc: std.mem.Allocator) !?Grid {
         var data = std.ArrayList(u8).init(alloc);
         defer data.deinit();
 
         var n: usize = 0;
         var m: usize = 0;
         while (try self.next()) |line| {
+            if (line.len == 0) break;
             if (m == 0) {
                 m = line.len;
                 // assume that the grid is quadratic
@@ -155,6 +161,8 @@ pub const Lines = struct {
             n += 1;
         }
 
+        if (m == 0) return null;
+
         return .{ .n = n, .m = m, .data = try data.toOwnedSlice() };
     }
 
@@ -163,12 +171,24 @@ pub const Lines = struct {
     ///
     /// The memory belongs to the caller.
     pub fn readGridWithBoundary(self: *Lines, alloc: std.mem.Allocator, boundary: u8) !Grid {
+        return try readNextGridWithBoundary(self, alloc, boundary) orelse error.UnexpectedEndOfFile;
+    }
+
+    /// Read the next lines as a grid and add an additional boundary
+    /// character `boundary` around the field.
+    ///
+    /// The grid ends at the next empty line or eof.
+    /// Returns `null` if there is no further grid.
+    ///
+    /// The memory belongs to the caller.
+    pub fn readNextGridWithBoundary(self: *Lines, alloc: std.mem.Allocator, boundary: u8) !?Grid {
         var data = std.ArrayList(u8).init(alloc);
         defer data.deinit();
 
         var n: usize = 2;
         var m: usize = 0;
         while (try self.next()) |line| {
+            if (line.len == 0) break;
             if (m == 0) {
                 m = line.len + 2;
                 // assume that the grid is quadratic
@@ -181,6 +201,9 @@ pub const Lines = struct {
             try data.append(boundary);
             n += 1;
         }
+
+        if (m == 0) return null;
+
         try data.appendNTimes(boundary, m);
 
         return .{ .n = n, .m = m, .data = try data.toOwnedSlice() };
