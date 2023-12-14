@@ -35,6 +35,15 @@ pub const Pos = struct {
         };
     }
 
+    pub fn stepn(p: Pos, dir: Dir, n: usize) Pos {
+        return switch (dir) {
+            .north => .{ .i = p.i - n, .j = p.j },
+            .west => .{ .i = p.i, .j = p.j - n },
+            .south => .{ .i = p.i + n, .j = p.j },
+            .east => .{ .i = p.i, .j = p.j + n },
+        };
+    }
+
     pub fn dist1(a: Pos, b: Pos) usize {
         return (if (a.i > b.i) a.i - b.i else b.i - a.i) +
             (if (a.j > b.j) a.j - b.j else b.j - a.j);
