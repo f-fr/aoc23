@@ -5,17 +5,18 @@ pub fn GenArray(comptime T: type, comptime N: usize) type {
         const Self = @This();
 
         data: [N]T = undefined,
-        index: [N]usize = undefined,
+        gens: [N]usize = .{0} ** N,
+        generation: usize = 1,
         actives: [N]usize = undefined,
         nactives: usize = 0,
 
         pub fn clear(self: *Self) void {
             self.nactives = 0;
+            self.generation += 1;
         }
 
         pub fn get(self: *const Self, i: usize) ?T {
-            const j = self.index[i];
-            return if (j < self.nactives and self.actives[j] == i) self.data[i] else null;
+            return if (self.gens[i] == self.generation) self.data[i] else null;
         }
 
         pub fn set(self: *Self, i: usize, v: T) void {
@@ -23,11 +24,9 @@ pub fn GenArray(comptime T: type, comptime N: usize) type {
         }
 
         pub fn getPtrOrPut(self: *Self, i: usize, v: T) *T {
-            const j = self.index[i];
-            const n = self.nactives;
-            if (j >= n or self.actives[j] != i) {
-                self.index[i] = n;
-                self.actives[n] = i;
+            if (self.gens[i] != self.generation) {
+                self.gens[i] = self.generation;
+                self.actives[self.nactives] = i;
                 self.nactives += 1;
                 self.data[i] = v;
             }
