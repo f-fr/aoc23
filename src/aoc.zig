@@ -1,6 +1,8 @@
 const std = @import("std");
 const testing = std.testing;
 
+pub const GenArray = @import("./genary.zig").GenArray;
+
 pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
 pub var allocator = if (@import("builtin").is_test) testing.allocator else allocator_instance.allocator();
 
@@ -504,4 +506,8 @@ test "crt" {
         .{ .a = 3, .m = 5 },
         .{ .a = 2, .m = 7 },
     }));
+}
+
+test {
+    testing.refAllDecls(@This());
 }
