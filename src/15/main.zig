@@ -8,10 +8,7 @@ const MaxLabel: usize = 6;
 
 fn hash(s: []const u8) u8 {
     var h: u8 = 0;
-    for (s) |c| {
-        if (c == '\n') continue;
-        h = (h +% c) *% 17;
-    }
+    for (s) |c| h = (h +% c) *% 17;
     return h;
 }
 
@@ -40,7 +37,8 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
     lines.delimiter = ',';
     var score1: u64 = 0;
-    while (try lines.next()) |tok| {
+    while (try lines.next()) |toknl| {
+        const tok = std.mem.trimRight(u8, toknl, "\n");
         score1 += hash(tok);
         const l = std.mem.indexOfAny(u8, tok, "=-") orelse return error.InvalidOperation;
         if (l > MaxLabel) return error.LabelTooLong;
@@ -92,7 +90,6 @@ pub fn main() !void {
 
 test "Day 15 hash" {
     try std.testing.expectEqual(@as(u8, 52), hash("HASH"));
-    try std.testing.expectEqual(@as(u8, 52), hash("HASH\n"));
 }
 
 test "Day 15 part 1" {
