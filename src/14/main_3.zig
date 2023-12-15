@@ -8,9 +8,9 @@ const MaxColPockets = 1464;
 const Code = [MaxColPockets / 2]u8;
 
 const Pocket = struct {
-    i: usize = 0,
-    beg: usize = 0,
-    end: usize = 0,
+    i: u8 = 0,
+    beg: u8 = 0,
+    end: u8 = 0,
 };
 
 fn GenArray(comptime T: type, comptime N: usize) type {
@@ -47,11 +47,12 @@ fn GenArray(comptime T: type, comptime N: usize) type {
 const PocketCnts = GenArray(u8, @max(MaxRowPockets, MaxColPockets));
 
 fn encode(counts: *const PocketCnts) Code {
-    var code = [1]u8{0} ** (MaxColPockets / 2);
-    for (counts.items()) |i| {
-        const c = counts.get(i);
+    var code: [MaxColPockets / 2]u8 = undefined;
+    for (0..counts.nactives / 2) |i| {
         // hopefully 4 bits per pocket count are sufficient
-        code[i / 2] |= @intCast((c & 0b1111) << @as(u3, @intCast((i % 2) * 4)));
+        const c1 = counts.get(counts.actives[2 * i]) & 0b1111;
+        const c2 = counts.get(counts.actives[2 * i + 1]) & 0b1111;
+        code[i] = (c1 << 4) | c2;
     }
     return code;
 }
@@ -81,10 +82,7 @@ fn tilt(tocounts: *PocketCnts, topocketidx: []const []const usize, fromcounts: *
         const c = fromcounts.get(idx);
         const j = frompockets[idx].i;
         const i_beg = if (fwd) frompockets[idx].beg else frompockets[idx].end - c;
-        for (0..c) |off| {
-            const i = i_beg + off;
-            tocounts.addOne(topocketidx[i][j]);
-        }
+        for (i_beg..i_beg + c) |i| tocounts.addOne(topocketidx[j][i]);
     }
 }
 
@@ -95,11 +93,11 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
     var grid = try lines.readGrid(a);
 
-    var rowpocketidx = try a.alloc([]usize, grid.n);
-    for (0..grid.n) |i| rowpocketidx[i] = try a.alloc(usize, grid.m);
+    var rowpocketidx = try a.alloc([]usize, grid.m);
+    for (0..grid.m) |i| rowpocketidx[i] = try a.alloc(usize, grid.n);
 
-    var colpocketidx = try a.alloc([]usize, grid.m);
-    for (0..grid.m) |i| colpocketidx[i] = try a.alloc(usize, grid.n);
+    var colpocketidx = try a.alloc([]usize, grid.n);
+    for (0..grid.n) |i| colpocketidx[i] = try a.alloc(usize, grid.m);
 
     var rowpockets = try std.ArrayList(Pocket).initCapacity(a, MaxRowPockets);
     var rowcounts = PocketCnts{};
@@ -112,9 +110,13 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             while (j < grid.m and grid.at(i, j) == '#') j += 1;
             const j_beg = j;
             while (j < grid.m and grid.at(i, j) != '#') : (j += 1) {
-                rowpocketidx[i][j] = rowpockets.items.len;
+                rowpocketidx[j][i] = rowpockets.items.len;
             }
-            if (j > j_beg) rowpockets.appendAssumeCapacity(.{ .i = i, .beg = j_beg, .end = j });
+            if (j > j_beg) rowpockets.appendAssumeCapacity(.{
+                .i = @intCast(i),
+                .beg = @intCast(j_beg),
+                .end = @intCast(j),
+            });
         }
     }
 
@@ -124,9 +126,13 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             while (i < grid.m and grid.at(i, j) == '#') i += 1;
             const i_beg = i;
             while (i < grid.m and grid.at(i, j) != '#') : (i += 1) {
-                colpocketidx[j][i] = colpockets.items.len;
+                colpocketidx[i][j] = colpockets.items.len;
             }
-            if (i > i_beg) colpockets.appendAssumeCapacity(.{ .i = j, .beg = i_beg, .end = i });
+            if (i > i_beg) colpockets.appendAssumeCapacity(.{
+                .i = @intCast(j),
+                .beg = @intCast(i_beg),
+                .end = @intCast(i),
+            });
         }
     }
 
@@ -134,7 +140,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     colcounts.clear();
     for (0..grid.m) |j| {
         for (0..grid.n) |i| {
-            if (grid.at(i, j) == 'O') colcounts.addOne(colpocketidx[j][i]);
+            if (grid.at(i, j) == 'O') colcounts.addOne(colpocketidx[i][j]);
         }
     }
 

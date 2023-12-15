@@ -8,9 +8,9 @@ const MaxColPockets = 1464;
 const Code = [MaxColPockets / 2]u8;
 
 const Pocket = struct {
-    i: usize = 0,
-    beg: usize = 0,
-    end: usize = 0,
+    i: u8 = 0,
+    beg: u8 = 0,
+    end: u8 = 0,
 };
 
 const PocketCnts = aoc.GenArray(u8, @max(MaxRowPockets, MaxColPockets));
@@ -84,7 +84,11 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             while (j < grid.m and grid.at(i, j) != '#') : (j += 1) {
                 rowpocketidx[i][j] = rowpockets.items.len;
             }
-            if (j > j_beg) rowpockets.appendAssumeCapacity(.{ .i = i, .beg = j_beg, .end = j });
+            if (j > j_beg) rowpockets.appendAssumeCapacity(.{
+                .i = @intCast(i),
+                .beg = @intCast(j_beg),
+                .end = @intCast(j),
+            });
         }
     }
 
@@ -96,7 +100,11 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             while (i < grid.m and grid.at(i, j) != '#') : (i += 1) {
                 colpocketidx[j][i] = colpockets.items.len;
             }
-            if (i > i_beg) colpockets.appendAssumeCapacity(.{ .i = j, .beg = i_beg, .end = i });
+            if (i > i_beg) colpockets.appendAssumeCapacity(.{
+                .i = @intCast(j),
+                .beg = @intCast(i_beg),
+                .end = @intCast(i),
+            });
         }
     }
 
