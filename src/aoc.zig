@@ -3,7 +3,10 @@ const testing = std.testing;
 
 pub const GenArray = @import("./genary.zig").GenArray;
 
-pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
+//pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
+// 1 MiB of memory for dynamic allocation
+var mem_buffer: [1024 * 1024]u8 = undefined;
+pub var allocator_instance = std.heap.FixedBufferAllocator.init(&mem_buffer);
 pub var allocator = if (@import("builtin").is_test) testing.allocator else allocator_instance.allocator();
 
 pub const Err = error{
