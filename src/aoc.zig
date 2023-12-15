@@ -115,6 +115,7 @@ pub const Lines = struct {
         buffer: std.io.FixedBufferStream([]const u8),
     },
     buf: [4096]u8 = undefined,
+    delimiter: u8 = '\n',
 
     pub fn init(filename: []const u8) !Lines {
         info("Read instance file: {s}", .{filename});
@@ -142,9 +143,9 @@ pub const Lines = struct {
 
     pub fn next(self: *Lines) !?[]const u8 {
         if (self.file) |_| {
-            return self.r.file.reader().readUntilDelimiterOrEof(&self.buf, '\n');
+            return self.r.file.reader().readUntilDelimiterOrEof(&self.buf, self.delimiter);
         } else {
-            return self.r.buffer.reader().readUntilDelimiterOrEof(&self.buf, '\n');
+            return self.r.buffer.reader().readUntilDelimiterOrEof(&self.buf, self.delimiter);
         }
     }
 
