@@ -12,20 +12,22 @@ const State = struct {
 
 const States = std.ArrayList(State);
 
-fn countEnergized(grid: *const aoc.Grid, start: State, states: *States) !u64 {
-    var seen: [NumRows][NumCols][4]bool = .{.{.{false} ** 4} ** NumCols} ** NumRows;
+fn countEnergized(grid: *const aoc.Grid, start: State, states: *States) u64 {
+    var seen: [NumRows][NumCols]u4 = .{.{0} ** NumCols} ** NumRows;
 
     states.clearRetainingCapacity();
-    try states.append(start);
+    states.appendAssumeCapacity(start);
 
+    var score: usize = 0;
     while (states.popOrNull()) |st| {
-        const d: usize = @intFromEnum(st.dir);
+        const d: u2 = @intFromEnum(st.dir);
         const c = grid.at(st.pos.i, st.pos.j);
-        if (c == ' ' or seen[st.pos.i][st.pos.j][d]) continue;
-        seen[st.pos.i][st.pos.j][d] = true;
+        if (c == ' ' or (seen[st.pos.i][st.pos.j] & (@as(u4, 1) << d) != 0)) continue;
+        score += @intFromBool(seen[st.pos.i][st.pos.j] == 0);
+        seen[st.pos.i][st.pos.j] |= @as(u4, 1) << d;
 
         switch (c) {
-            '.' => try states.append(.{ .pos = st.pos.step(st.dir), .dir = st.dir }),
+            '.' => states.appendAssumeCapacity(.{ .pos = st.pos.step(st.dir), .dir = st.dir }),
             '\\' => {
                 const new_dir: aoc.Dir = switch (st.dir) {
                     .north => .west,
@@ -33,7 +35,7 @@ fn countEnergized(grid: *const aoc.Grid, start: State, states: *States) !u64 {
                     .south => .east,
                     .east => .south,
                 };
-                try states.append(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
+                states.appendAssumeCapacity(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
             },
             '/' => {
                 const new_dir: aoc.Dir = switch (st.dir) {
@@ -42,34 +44,21 @@ fn countEnergized(grid: *const aoc.Grid, start: State, states: *States) !u64 {
                     .south => .west,
                     .west => .south,
                 };
-                try states.append(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
+                states.appendAssumeCapacity(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
             },
             '-' => switch (st.dir) {
-                .east, .west => try states.append(.{ .pos = st.pos.step(st.dir), .dir = st.dir }),
+                .east, .west => states.appendAssumeCapacity(.{ .pos = st.pos.step(st.dir), .dir = st.dir }),
                 else => inline for (.{ .east, .west }) |new_dir| {
-                    try states.append(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
+                    states.appendAssumeCapacity(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
                 },
             },
             '|' => switch (st.dir) {
-                .north, .south => try states.append(.{ .pos = st.pos.step(st.dir), .dir = st.dir }),
+                .north, .south => states.appendAssumeCapacity(.{ .pos = st.pos.step(st.dir), .dir = st.dir }),
                 else => inline for (.{ .north, .south }) |new_dir| {
-                    try states.append(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
+                    states.appendAssumeCapacity(.{ .pos = st.pos.step(new_dir), .dir = new_dir });
                 },
             },
-            else => return error.InvalidGrid,
-        }
-    }
-
-    var score: u64 = 0;
-    for (1..grid.n - 1) |i| {
-        for (1..grid.m - 1) |j| {
-            // var sn = false;
-            inline for (0..4) |d| {
-                if (seen[i][j][d]) {
-                    score += 1;
-                    break;
-                }
-            }
+            else => unreachable,
         }
     }
 
@@ -81,20 +70,20 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     defer arena.deinit();
     const a = arena.allocator();
 
-    var states = States.init(a);
     const grid = try lines.readGridWithBoundary(a, ' ');
+    var states = try States.initCapacity(a, grid.n * grid.m * 4);
 
-    const score1 = try countEnergized(&grid, .{ .pos = .{ .i = 1, .j = 1 }, .dir = .east }, &states);
+    const score1 = countEnergized(&grid, .{ .pos = .{ .i = 1, .j = 1 }, .dir = .east }, &states);
 
     var score2: u64 = 0;
     for (1..grid.n - 1) |i| {
-        score2 = @max(score2, try countEnergized(&grid, .{ .pos = .{ .i = i, .j = 1 }, .dir = .east }, &states));
-        score2 = @max(score2, try countEnergized(&grid, .{ .pos = .{ .i = i, .j = grid.n - 2 }, .dir = .west }, &states));
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = i, .j = 1 }, .dir = .east }, &states));
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = i, .j = grid.n - 2 }, .dir = .west }, &states));
     }
 
     for (1..grid.m - 1) |j| {
-        score2 = @max(score2, try countEnergized(&grid, .{ .pos = .{ .i = 1, .j = j }, .dir = .south }, &states));
-        score2 = @max(score2, try countEnergized(&grid, .{ .pos = .{ .i = 1, .j = grid.m - 2 }, .dir = .north }, &states));
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = 1, .j = j }, .dir = .south }, &states));
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = grid.n - 2, .j = j }, .dir = .north }, &states));
     }
 
     return .{ score1, score2 };
