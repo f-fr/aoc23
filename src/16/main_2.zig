@@ -10,72 +10,76 @@ const State = struct {
     dir: aoc.Dir,
 };
 
-const States = std.ArrayList(State);
+var jumps: [NumRows][NumCols][4]u8 = undefined;
+var energized: [NumRows][NumCols]u8 = .{.{0} ** NumCols} ** NumRows;
+var seen: [NumRows][NumCols][4]u8 = .{.{.{0} ** 4} ** NumCols} ** NumRows;
+var generation: u8 = 1;
+var score: usize = 0;
 
-fn step(pos: aoc.Pos, dir: aoc.Dir, jumps: *const [NumRows][NumCols][4]usize, energized: *[NumRows][NumCols]bool, score: *usize) State {
-    const st: State = next: {
-        switch (dir) {
-            .north => {
-                const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.north)];
-                for (pos.i - m..pos.i) |i| {
-                    if (!energized[i][pos.j]) {
-                        score.* += 1;
-                        energized[i][pos.j] = true;
-                    }
-                }
-                break :next .{ .pos = .{ .i = pos.i - m, .j = pos.j }, .dir = dir };
-            },
-            .south => {
-                const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.south)];
-                for (pos.i + 1..pos.i + m + 1) |i| {
-                    if (!energized[i][pos.j]) {
-                        score.* += 1;
-                        energized[i][pos.j] = true;
-                    }
-                }
-                break :next .{ .pos = .{ .i = pos.i + m, .j = pos.j }, .dir = dir };
-            },
-            .west => {
-                const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.west)];
-                for (pos.j - m..pos.j) |j| {
-                    if (!energized[pos.i][j]) {
-                        score.* += 1;
-                        energized[pos.i][j] = true;
-                    }
-                }
-                break :next .{ .pos = .{ .i = pos.i, .j = pos.j - m }, .dir = dir };
-            },
-            .east => {
-                const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.east)];
-                for (pos.j + 1..pos.j + m + 1) |j| {
-                    if (!energized[pos.i][j]) {
-                        score.* += 1;
-                        energized[pos.i][j] = true;
-                    }
-                }
-                break :next .{ .pos = .{ .i = pos.i, .j = pos.j + m }, .dir = dir };
-            },
-        }
-    };
+var states: [NumRows * NumCols * 4]State = undefined;
+var nstates: usize = 0;
 
-    return st;
+fn statesPopOrNull() ?State {
+    if (nstates > 0) {
+        nstates -= 1;
+        return states[nstates];
+    } else return null;
 }
 
-fn countEnergized(grid: *const aoc.Grid, jumps: *const [NumRows][NumCols][4]usize, start: State, states: *States) u64 {
-    var energized: [NumRows][NumCols]bool = .{.{false} ** NumCols} ** NumRows;
-    var seen: [NumRows][NumCols]u4 = .{.{0} ** NumCols} ** NumRows;
+fn statesPush(st: State) void {
+    states[nstates] = st;
+    nstates += 1;
+}
 
-    states.clearRetainingCapacity();
-    states.appendAssumeCapacity(start);
+fn step(pos: aoc.Pos, dir: aoc.Dir) State {
+    switch (dir) {
+        .north => {
+            const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.north)];
+            for (pos.i - m..pos.i) |i| {
+                score += @intFromBool(energized[i][pos.j] != generation);
+                energized[i][pos.j] = generation;
+            }
+            return .{ .pos = .{ .i = pos.i - m, .j = pos.j }, .dir = dir };
+        },
+        .west => {
+            const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.west)];
+            for (pos.j - m..pos.j) |j| {
+                score += @intFromBool(energized[pos.i][j] != generation);
+                energized[pos.i][j] = generation;
+            }
+            return .{ .pos = .{ .i = pos.i, .j = pos.j - m }, .dir = dir };
+        },
+        .south => {
+            const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.south)];
+            for (pos.i + 1..pos.i + m + 1) |i| {
+                score += @intFromBool(energized[i][pos.j] != generation);
+                energized[i][pos.j] = generation;
+            }
+            return .{ .pos = .{ .i = pos.i + m, .j = pos.j }, .dir = dir };
+        },
+        .east => {
+            const m = jumps[pos.i][pos.j][@intFromEnum(aoc.Dir.east)];
+            for (pos.j + 1..pos.j + m + 1) |j| {
+                score += @intFromBool(energized[pos.i][j] != generation);
+                energized[pos.i][j] = generation;
+            }
+            return .{ .pos = .{ .i = pos.i, .j = pos.j + m }, .dir = dir };
+        },
+    }
+}
 
-    var score: usize = 0;
+fn countEnergized(grid: *const aoc.Grid, start: State) u64 {
+    nstates = 1;
+    states[0] = start;
+
+    score = 0;
     var iter: usize = 0;
-    while (states.popOrNull()) |st| : (iter += 1) {
+    while (statesPopOrNull()) |st| : (iter += 1) {
         const d: u2 = @intFromEnum(st.dir);
 
         // check if already visited from this direction
-        if (seen[st.pos.i][st.pos.j] & (@as(u4, 1) << d) != 0) continue;
-        seen[st.pos.i][st.pos.j] |= @as(u4, 1) << d;
+        if (seen[st.pos.i][st.pos.j][d] == generation) continue;
+        seen[st.pos.i][st.pos.j][d] = generation;
 
         // check if we reached the boundary
         const c = grid.at(st.pos.i, st.pos.j);
@@ -85,7 +89,7 @@ fn countEnergized(grid: *const aoc.Grid, jumps: *const [NumRows][NumCols][4]usiz
         }
 
         switch (c) {
-            ' ' => states.appendAssumeCapacity(step(st.pos, st.dir, jumps, &energized, &score)),
+            ' ' => statesPush(step(st.pos, st.dir)),
             '\\' => {
                 const new_dir: aoc.Dir = switch (st.dir) {
                     .north => .west,
@@ -93,7 +97,7 @@ fn countEnergized(grid: *const aoc.Grid, jumps: *const [NumRows][NumCols][4]usiz
                     .south => .east,
                     .east => .south,
                 };
-                states.appendAssumeCapacity(step(st.pos, new_dir, jumps, &energized, &score));
+                statesPush(step(st.pos, new_dir));
             },
             '/' => {
                 const new_dir: aoc.Dir = switch (st.dir) {
@@ -102,18 +106,18 @@ fn countEnergized(grid: *const aoc.Grid, jumps: *const [NumRows][NumCols][4]usiz
                     .south => .west,
                     .west => .south,
                 };
-                states.appendAssumeCapacity(step(st.pos, new_dir, jumps, &energized, &score));
+                statesPush(step(st.pos, new_dir));
             },
             '-' => switch (st.dir) {
-                .east, .west => states.appendAssumeCapacity(step(st.pos, st.dir, jumps, &energized, &score)),
+                .east, .west => statesPush(step(st.pos, st.dir)),
                 else => inline for (.{ .east, .west }) |new_dir| {
-                    states.appendAssumeCapacity(step(st.pos, new_dir, jumps, &energized, &score));
+                    statesPush(step(st.pos, new_dir));
                 },
             },
             '|' => switch (st.dir) {
-                .north, .south => states.appendAssumeCapacity(step(st.pos, st.dir, jumps, &energized, &score)),
+                .north, .south => statesPush(step(st.pos, st.dir)),
                 else => inline for (.{ .north, .south }) |new_dir| {
-                    states.appendAssumeCapacity(step(st.pos, new_dir, jumps, &energized, &score));
+                    statesPush(step(st.pos, new_dir));
                 },
             },
             else => unreachable,
@@ -129,12 +133,10 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const a = arena.allocator();
 
     const grid = try lines.readGridWithBoundary(a, ' ');
-    var states = try States.initCapacity(a, grid.n * grid.m * 4);
 
     // distance from (i,j) in direction d until next non-'.'-field
-    var jumps: [NumRows][NumCols][4]usize = undefined;
     for (1..grid.n - 1) |i| {
-        var j: usize = 0;
+        var j: u8 = 0;
         while (j < grid.m - 1) {
             var j_start = j;
             j += 1;
@@ -145,7 +147,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         }
     }
     for (1..grid.m - 1) |j| {
-        var i: usize = 0;
+        var i: u8 = 0;
         while (i < grid.n - 1) {
             var i_start = i;
             i += 1;
@@ -156,17 +158,22 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         }
     }
 
-    const score1 = countEnergized(&grid, &jumps, .{ .pos = .{ .i = 1, .j = 0 }, .dir = .east }, &states);
+    const score1 = countEnergized(&grid, .{ .pos = .{ .i = 1, .j = 0 }, .dir = .east });
 
     var score2: u64 = 0;
     for (1..grid.n - 1) |i| {
-        score2 = @max(score2, countEnergized(&grid, &jumps, .{ .pos = .{ .i = i, .j = 0 }, .dir = .east }, &states));
-        score2 = @max(score2, countEnergized(&grid, &jumps, .{ .pos = .{ .i = i, .j = grid.m - 1 }, .dir = .west }, &states));
+        generation += 1;
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = i, .j = 0 }, .dir = .east }));
+        generation += 1;
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = i, .j = grid.m - 1 }, .dir = .west }));
     }
 
+    if (generation > 200) generation = 0;
     for (1..grid.m - 1) |j| {
-        score2 = @max(score2, countEnergized(&grid, &jumps, .{ .pos = .{ .i = 0, .j = j }, .dir = .south }, &states));
-        score2 = @max(score2, countEnergized(&grid, &jumps, .{ .pos = .{ .i = grid.n - 1, .j = j }, .dir = .north }, &states));
+        generation += 1;
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = 0, .j = j }, .dir = .south }));
+        generation += 1;
+        score2 = @max(score2, countEnergized(&grid, .{ .pos = .{ .i = grid.n - 1, .j = j }, .dir = .north }));
     }
 
     return .{ score1, score2 };
