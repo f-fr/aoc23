@@ -140,14 +140,15 @@ pub fn build(b: *std.Build) !void {
         \\    var t_total: f64 = 0;
         \\    var t_day: f64 = 0;
         \\    var cur_day: usize = 0;
+        \\    var timer = try std.time.Timer.start();
         \\    inline for (days) |day| {
         \\        var lines = try aoc.Lines.init(day.filename);
         \\        defer lines.deinit();
         \\
-        \\        const t_start = std.time.milliTimestamp();
+        \\        timer.reset();
         \\        const s = try day.run(&lines);
-        \\        const t_end = std.time.milliTimestamp();
-        \\        const t = @as(f64, @floatFromInt(t_end - t_start)) / 1000.0;
+        \\        const t_end = timer.lap();
+        \\        const t = @as(f64, @floatFromInt(t_end)) / 1e9;
         \\        if (cur_day != day.day) {
         \\            t_total += t_day;
         \\            t_day = t;

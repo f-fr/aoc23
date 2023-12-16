@@ -254,13 +254,13 @@ pub fn run(name: []const u8, comptime runfn: anytype) !void {
     var lines = try readLines();
     defer lines.deinit();
 
-    const t_start = std.time.milliTimestamp();
+    var timer = try std.time.Timer.start();
     const scores = try runfn(&lines);
-    const t_end = std.time.milliTimestamp();
+    const t_end = timer.lap();
 
     println("Part 1: {}", .{scores[0]});
     println("Part 2: {}", .{scores[1]});
-    println("Time  : {d:.3}", .{@as(f64, @floatFromInt(t_end - t_start)) / 1000.0});
+    println("Time  : {d:.3}", .{@as(f64, @floatFromInt(t_end)) / 1e9});
 }
 
 pub const info = std.log.info;
