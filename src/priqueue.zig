@@ -41,6 +41,15 @@ pub fn PriQueue(comptime K: type, comptime V: type) type {
             self.allocator.free(self.positions);
         }
 
+        pub fn ensureTotalCapacity(self: *Self, capacity: usize) !void {
+            if (self.heap.len < capacity) {
+                self.heap = try self.allocator.realloc(self.heap, capacity);
+                self.keys = try self.allocator.realloc(self.keys, capacity);
+                self.values = try self.allocator.realloc(self.values, capacity);
+                self.positions = try self.allocator.realloc(self.positions, capacity);
+            }
+        }
+
         pub fn clearRetainingCapacity(self: *Self) void {
             self.len = 0;
             if (self.heap.len > 0) {

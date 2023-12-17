@@ -40,6 +40,11 @@ pub fn SearchWithSeen(comptime G: type, comptime Seen: fn (comptime type, compti
             self.seen.deinit();
         }
 
+        pub fn ensureCapacity(self: *Self, capacity: usize) !void {
+            try self.pqueue.ensureTotalCapacity(capacity);
+            try self.seen.ensureTotalCapacity(capacity);
+        }
+
         pub fn start(self: *Self, s: G.Node) !void {
             self.it = null;
             self.pqueue.clearRetainingCapacity();
