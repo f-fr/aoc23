@@ -1,13 +1,15 @@
 const std = @import("std");
 const testing = std.testing;
+const search = @import("./search.zig");
 
 pub const GenArray = @import("./genary.zig").GenArray;
-pub const Search = @import("./search.zig").Search;
+pub const Search = search.Search;
+pub const SearchWithSeen = search.SearchWithSeen;
 pub const PriQueue = @import("./priqueue.zig");
 
 //pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
 // 1.5 MiB of memory for dynamic allocation
-var mem_buffer: [1024 * 1024 * 100]u8 = undefined;
+var mem_buffer: [1024 * 1024 * 50]u8 = undefined;
 pub var allocator_instance = std.heap.FixedBufferAllocator.init(&mem_buffer);
 pub var allocator = if (@import("builtin").is_test) testing.allocator else allocator_instance.allocator();
 

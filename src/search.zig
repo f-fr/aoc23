@@ -4,10 +4,14 @@ const testing = std.testing;
 const PriQueue = @import("./priqueue.zig").PriQueue;
 
 pub fn Search(comptime G: type) type {
+    return SearchWithSeen(G, std.AutoHashMap);
+}
+
+pub fn SearchWithSeen(comptime G: type, comptime Seen: fn (comptime type, comptime type) type) type {
     return struct {
         const Self = @This();
         const P = PriQueue(G.Node, G.Value);
-        const S = std.AutoHashMap(G.Node, Data);
+        const S = Seen(G.Node, Data);
 
         const Data = struct {
             predecessor_node: G.Node,
@@ -25,6 +29,7 @@ pub fn Search(comptime G: type) type {
         pub fn init(allocator: std.mem.Allocator, g: *const G) Self {
             return .{
                 .graph = g,
+                //.pqueue = P.initCapacity(allocator, 200 * 200) catch unreachable,
                 .pqueue = P.init(allocator),
                 .seen = S.init(allocator),
             };

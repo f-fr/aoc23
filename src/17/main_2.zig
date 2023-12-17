@@ -2,35 +2,107 @@
 const std = @import("std");
 const aoc = @import("aoc");
 
+const Size: usize = 143;
 var grid: aoc.Grid = undefined;
+var lowers: [Size][Size]u16 = undefined;
+var scores: [2]std.atomic.Value(u32) = .{ std.atomic.Value(u32).init(0), std.atomic.Value(u32).init(0) };
 
 const Orien = enum { vert, horiz };
 
+const Pos = struct { i: u8, j: u8 };
 const State = struct {
-    pos: aoc.Pos,
+    pos: Pos,
     orien: Orien,
 };
 
-fn stepn(p: aoc.Pos, dir: aoc.Dir, n: usize) ?aoc.Pos {
+fn step(p: Pos, dir: aoc.Dir) Pos {
     return switch (dir) {
-        .north => if (p.i >= n) .{ .i = p.i - n, .j = p.j } else null,
-        .west => if (p.j >= n) .{ .i = p.i, .j = p.j - n } else null,
-        .south => .{ .i = p.i + n, .j = p.j },
-        .east => .{ .i = p.i, .j = p.j + n },
+        .north => .{ .i = p.i - 1, .j = p.j },
+        .west => .{ .i = p.i, .j = p.j - 1 },
+        .south => .{ .i = p.i + 1, .j = p.j },
+        .east => .{ .i = p.i, .j = p.j + 1 },
+    };
+}
+
+const SimpleGraph = struct {
+    pub const Node = Pos;
+    pub const Edge = void;
+    pub const Value = u16;
+    pub const Neigh = struct { node: Node, edge: Edge, dist: Value };
+
+    pub const Iterator = struct {
+        src: Node,
+        i: u8 = 0, //< current direction
+
+        pub fn next(self: *Iterator) ?Neigh {
+            while (self.i < 4) {
+                self.i += 1;
+                const dir: aoc.Dir = @enumFromInt(self.i - 1);
+                const pos = step(self.src, dir);
+                if (pos.i > 0 and pos.i < grid.n - 1 and pos.j > 0 and pos.j < grid.m - 1)
+                    return .{ .node = pos, .edge = {}, .dist = grid.at(self.src.i, self.src.j) - '0' };
+            }
+            return null;
+        }
+    };
+
+    pub fn neighs(self: *const SimpleGraph, u: Node) Iterator {
+        _ = self;
+        return Iterator{ .src = u };
+    }
+
+    pub fn heur(self: *const SimpleGraph, u: Node) Value {
+        _ = self;
+        _ = u;
+
+        return 0;
+    }
+};
+
+fn SimpleSeen(comptime N: type, comptime D: type) type {
+    return struct {
+        const Self = @This();
+
+        data: [Size][Size]?D = undefined,
+
+        pub fn init(_: std.mem.Allocator) Self {
+            return .{};
+        }
+
+        pub fn deinit(self: *Self) void {
+            _ = self;
+        }
+
+        pub fn clearRetainingCapacity(self: *Self) void {
+            self.data = .{.{null} ** Size} ** Size;
+        }
+
+        pub fn put(self: *Self, n: N, d: D) !void {
+            self.data[n.i][n.j] = d;
+        }
+
+        pub fn getPtr(self: *Self, n: N) ?*D {
+            if (self.data[n.i][n.j]) |*d| {
+                return d;
+            } else {
+                return null;
+            }
+        }
     };
 }
 
 const Graph = struct {
     pub const Node = State;
     pub const Edge = void;
-    pub const Value = usize;
+    pub const Value = u16;
     pub const Neigh = struct { node: Node, edge: Edge, dist: Value };
 
     min_d: u8 = 1,
     max_d: u8 = 3,
 
     pub const Iterator = struct {
-        g: *const Graph,
+        min_d: u8,
+        max_d: u8,
         src: Node,
         i: u8 = 0, //< current direction
 
@@ -40,20 +112,14 @@ const Graph = struct {
         dist: u8 = 0, //< current value
 
         pub fn next(self: *Iterator) ?Neigh {
-            main: while (true) {
-                if (self.i >= 3) {
-                    // aoc.println("END OF {},{}", .{ self.src.pos.i, self.src.pos.j });
-                    return null;
-                }
-
+            main: while (self.i < 3) {
                 if (self.step == 0) {
-                    // aoc.println("START DIR {} src:{},{}", .{ self.i, self.src.pos.i, self.src.pos.j });
                     if (self.src.pos.i == 1 and self.src.pos.j == 1) {
                         // special handling of start node
                         if (self.i == 0) { // go east
                             self.cur = .{ .pos = self.src.pos, .orien = .horiz };
                             self.dir = .east;
-                        } else if (self.i == 1) { // go south
+                        } else if (self.i == 2) { // go south
                             self.cur = .{ .pos = self.src.pos, .orien = .vert };
                             self.dir = .south;
                         } else {
@@ -67,31 +133,23 @@ const Graph = struct {
                         self.dir = nxt_dir;
                     }
                     self.dist = 0;
-                    const min_d = self.g.min_d;
+                    const min_d = self.min_d;
                     while (self.step < min_d) : (self.step += 1) {
-                        self.cur.pos = self.cur.pos.step(self.dir);
+                        self.cur.pos = step(self.cur.pos, self.dir);
                         if (self.cur.pos.i == 0 or self.cur.pos.j == 0 or self.cur.pos.i == grid.n - 1 or self.cur.pos.j == grid.m - 1) {
                             self.step = 0;
-                            if (self.src.pos.i == 1 and self.src.pos.j == 1)
-                                self.i += 1
-                            else
-                                self.i += 2;
+                            self.i += 2;
                             continue :main;
                         }
-                        self.dist += grid.atPos(self.cur.pos) - '0';
-                        // aoc.println("ADD {},{} -> {},{},{}: {} {}", .{ self.src.pos.i, self.src.pos.j, self.cur.pos.i, self.cur.pos.j, self.cur.dir, grid.atPos(self.cur.pos) - '0', self.dist });
+                        self.dist += grid.at(self.cur.pos.i, self.cur.pos.j) - '0';
                     }
                 } else {
                     self.step += 1;
-                    self.cur.pos = self.cur.pos.step(self.dir);
-                    self.dist += grid.atPos(self.cur.pos) - '0';
-                    // aoc.println("ADD {},{} -> {},{},{}: {} {}", .{ self.src.pos.i, self.src.pos.j, self.cur.pos.i, self.cur.pos.j, self.cur.dir, grid.atPos(self.cur.pos) - '0', self.dist });
-                    if (self.step == self.g.max_d) {
+                    self.cur.pos = step(self.cur.pos, self.dir);
+                    self.dist += grid.at(self.cur.pos.i, self.cur.pos.j) - '0';
+                    if (self.step == self.max_d) {
                         self.step = 0;
-                        if (self.src.pos.i == 1 and self.src.pos.j == 1)
-                            self.i += 1
-                        else
-                            self.i += 2;
+                        self.i += 2;
                     }
                 }
 
@@ -104,26 +162,83 @@ const Graph = struct {
                     };
                 } else if (self.step > 0) {
                     self.step = 0;
-                    if (self.src.pos.i == 1 and self.src.pos.j == 1)
-                        self.i += 1
-                    else
-                        self.i += 2;
+                    self.i += 2;
                 }
             }
+
+            return null;
         }
     };
 
     pub fn neighs(self: *const Graph, u: Node) Iterator {
-        return Iterator{ .g = self, .src = u, .cur = u };
+        return Iterator{ .min_d = self.min_d, .max_d = self.max_d, .src = u, .cur = u };
     }
 
     pub fn heur(self: *const Graph, u: Node) Value {
-        _ = self;
         _ = u;
 
+        _ = self;
+
+        // return lowers[u.pos.i][u.pos.j];
         return 0;
     }
 };
+
+fn Seen(comptime N: type, comptime D: type) type {
+    return struct {
+        const Self = @This();
+
+        data: [Size][Size][2]?D = undefined,
+
+        pub fn init(_: std.mem.Allocator) Self {
+            return .{};
+        }
+
+        pub fn deinit(self: *Self) void {
+            _ = self;
+        }
+
+        pub fn clearRetainingCapacity(self: *Self) void {
+            self.data = .{.{.{null} ** 2} ** Size} ** Size;
+        }
+
+        pub fn put(self: *Self, n: N, d: D) !void {
+            self.data[n.pos.i][n.pos.j][@intFromEnum(n.orien)] = d;
+        }
+
+        pub fn getPtr(self: *Self, n: N) ?*D {
+            if (self.data[n.pos.i][n.pos.j][@intFromEnum(n.orien)]) |*d| {
+                return d;
+            } else {
+                return null;
+            }
+        }
+    };
+}
+
+fn run_search(part: usize, min_d: u8, max_d: u8) !void {
+    var buf: [Size * Size * 100]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buf);
+    const a = fba.allocator();
+
+    var g = Graph{};
+    var search = aoc.SearchWithSeen(Graph, Seen).init(a, &g);
+    defer search.deinit();
+
+    g.min_d = min_d;
+    g.max_d = max_d;
+
+    try search.start(.{ .pos = .{ .i = 1, .j = 1 }, .orien = .vert });
+    var score: u32 = Size * Size * 10;
+    while (try search.next()) |nxt| {
+        if (nxt.node.pos.i == grid.n - 2 and nxt.node.pos.j == grid.m - 2) {
+            score = @min(score, nxt.dist);
+            break;
+        }
+    }
+
+    scores[part].store(score, .Monotonic);
+}
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
     var arena = std.heap.ArenaAllocator.init(aoc.allocator);
@@ -131,25 +246,40 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     const a = arena.allocator();
 
     grid = try lines.readGridWithBoundary(a, '0');
-    var g = Graph{};
-    var search = aoc.Search(Graph).init(a, &g);
-    defer search.deinit();
 
-    var scores: [2]u64 = .{std.math.maxInt(u64)} ** 2;
+    // {
+    //     var sg = SimpleGraph{};
+    //     var ssearch = aoc.SearchWithSeen(SimpleGraph, SimpleSeen).init(a, &sg);
+    //     defer ssearch.deinit();
+    //     try ssearch.start(.{ .i = @intCast(grid.n - 2), .j = @intCast(grid.m - 2) });
+    //     while (try ssearch.next()) |nxt| {
+    //         lowers[nxt.node.i][nxt.node.j] = nxt.dist;
+    //     }
+    //     aoc.println("LOWER {}", .{lowers[1][1]});
+    // }
 
-    inline for (.{ .{ 1, 3 }, .{ 4, 10 } }, 0..) |bnds, part| {
-        g.min_d = bnds[0];
-        g.max_d = bnds[1];
-        try search.start(.{ .pos = .{ .i = 1, .j = 1 }, .orien = .vert });
-        while (try search.next()) |nxt| {
-            // aoc.println("{},{},{}  :   {}", .{ nxt.node.pos.i, nxt.node.pos.j, nxt.node.dir, nxt.dist });
-            if (nxt.node.pos.i == grid.n - 2 and nxt.node.pos.j == grid.m - 2) {
-                scores[part] = @min(scores[part], nxt.dist);
-            } else if (nxt.dist >= scores[part]) break;
-        }
-    }
+    // var g = Graph{};
+    // var search = aoc.SearchWithSeen(Graph, Seen).init(a, &g);
+    // defer search.deinit();
 
-    return scores;
+    // inline for (.{ .{ 1, 3 }, .{ 4, 10 } }, 0..) |bnds, part| {
+    //     g.min_d = bnds[0];
+    //     g.max_d = bnds[1];
+    //     try search.start(.{ .pos = .{ .i = 1, .j = 1 }, .orien = .vert });
+    //     while (try search.next()) |nxt| {
+    //         if (nxt.node.pos.i == grid.n - 2 and nxt.node.pos.j == grid.m - 2) {
+    //             scores[part] = @min(scores[part], nxt.dist);
+    //         } else if (nxt.dist >= scores[part]) break;
+    //     }
+    // }
+
+    var th1 = try std.Thread.spawn(.{}, run_search, .{ 0, 1, 3 });
+    var th2 = try std.Thread.spawn(.{}, run_search, .{ 1, 4, 10 });
+
+    th1.join();
+    th2.join();
+
+    return .{ scores[0].load(.Monotonic), scores[1].load(.Monotonic) };
 }
 
 pub fn main() !void {
@@ -176,9 +306,9 @@ test "Day 17 part 1" {
 
     var lines = try aoc.Lines.initBuffer(EXAMPLE1);
     defer lines.deinit();
-    const scores = try run(&lines);
+    const allscores = try run(&lines);
 
-    try std.testing.expectEqual(PART1, scores[0]);
+    try std.testing.expectEqual(PART1, allscores[0]);
 }
 
 test "Day 17 part 2 - example 1" {
@@ -201,9 +331,9 @@ test "Day 17 part 2 - example 1" {
 
     var lines = try aoc.Lines.initBuffer(EXAMPLE2);
     defer lines.deinit();
-    const scores = try run(&lines);
+    const allscores = try run(&lines);
 
-    try std.testing.expectEqual(PART2, scores[1]);
+    try std.testing.expectEqual(PART2, allscores[1]);
 }
 
 test "Day 17 part 2 - example 2" {
@@ -218,7 +348,7 @@ test "Day 17 part 2 - example 2" {
 
     var lines = try aoc.Lines.initBuffer(EXAMPLE2);
     defer lines.deinit();
-    const scores = try run(&lines);
+    const allscores = try run(&lines);
 
-    try std.testing.expectEqual(PART2, scores[1]);
+    try std.testing.expectEqual(PART2, allscores[1]);
 }
