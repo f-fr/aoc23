@@ -4,9 +4,11 @@ const aoc = @import("aoc");
 
 var grid: aoc.Grid = undefined;
 
+const Orien = enum { vert, horiz };
+
 const State = struct {
     pos: aoc.Pos,
-    dir: aoc.Dir,
+    orien: Orien,
 };
 
 fn stepn(p: aoc.Pos, dir: aoc.Dir, n: usize) ?aoc.Pos {
@@ -34,6 +36,7 @@ const Graph = struct {
 
         step: u8 = 0, //< current step-size
         cur: State, //< current position
+        dir: aoc.Dir = .east,
         dist: u8 = 0, //< current value
 
         pub fn next(self: *Iterator) ?Neigh {
@@ -45,13 +48,28 @@ const Graph = struct {
 
                 if (self.step == 0) {
                     // aoc.println("START DIR {} src:{},{}", .{ self.i, self.src.pos.i, self.src.pos.j });
-                    const nxt_dir: aoc.Dir = @enumFromInt((@intFromEnum(self.src.dir) + self.i + 1) % 4);
-
+                    if (self.src.pos.i == 1 and self.src.pos.j == 1) {
+                        // special handling of start node
+                        if (self.i == 0) { // go east
+                            self.cur = .{ .pos = self.src.pos, .orien = .horiz };
+                            self.dir = .east;
+                        } else if (self.i == 1) { // go south
+                            self.cur = .{ .pos = self.src.pos, .orien = .vert };
+                            self.dir = .south;
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        const my_dir: aoc.Dir = if (self.src.orien == .vert) .south else .east;
+                        const nxt_orien: Orien = if (self.src.orien == .vert) .horiz else .vert;
+                        const nxt_dir: aoc.Dir = @enumFromInt((@intFromEnum(my_dir) + self.i + 1) % 4);
+                        self.cur = .{ .pos = self.src.pos, .orien = nxt_orien };
+                        self.dir = nxt_dir;
+                    }
                     self.dist = 0;
-                    self.cur = .{ .pos = self.src.pos, .dir = nxt_dir };
                     const min_d = self.g.min_d;
                     while (self.step < min_d) : (self.step += 1) {
-                        self.cur.pos = self.cur.pos.step(nxt_dir);
+                        self.cur.pos = self.cur.pos.step(self.dir);
                         if (self.cur.pos.i == 0 or self.cur.pos.j == 0 or self.cur.pos.i == grid.n - 1 or self.cur.pos.j == grid.m - 1) {
                             self.step = 0;
                             if (self.src.pos.i == 1 and self.src.pos.j == 1)
@@ -65,7 +83,7 @@ const Graph = struct {
                     }
                 } else {
                     self.step += 1;
-                    self.cur.pos = self.cur.pos.step(self.cur.dir);
+                    self.cur.pos = self.cur.pos.step(self.dir);
                     self.dist += grid.atPos(self.cur.pos) - '0';
                     // aoc.println("ADD {},{} -> {},{},{}: {} {}", .{ self.src.pos.i, self.src.pos.j, self.cur.pos.i, self.cur.pos.j, self.cur.dir, grid.atPos(self.cur.pos) - '0', self.dist });
                     if (self.step == self.g.max_d) {
@@ -122,7 +140,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     inline for (.{ .{ 1, 3 }, .{ 4, 10 } }, 0..) |bnds, part| {
         g.min_d = bnds[0];
         g.max_d = bnds[1];
-        try search.start(.{ .pos = .{ .i = 1, .j = 1 }, .dir = .north });
+        try search.start(.{ .pos = .{ .i = 1, .j = 1 }, .orien = .vert });
         while (try search.next()) |nxt| {
             // aoc.println("{},{},{}  :   {}", .{ nxt.node.pos.i, nxt.node.pos.j, nxt.node.dir, nxt.dist });
             if (nxt.node.pos.i == grid.n - 2 and nxt.node.pos.j == grid.m - 2) {
