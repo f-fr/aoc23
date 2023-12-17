@@ -2,6 +2,8 @@ const std = @import("std");
 const testing = std.testing;
 
 pub const GenArray = @import("./genary.zig").GenArray;
+pub const Search = @import("./search.zig").Search;
+pub const PriQueue = @import("./priqueue.zig");
 
 //pub var allocator_instance = std.heap.GeneralPurposeAllocator(.{}){};
 // 1.5 MiB of memory for dynamic allocation
