@@ -9,18 +9,13 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
 
     while (try lines.next()) |line| {
         const parts = try aoc.splitAnyN(3, line, " ()");
+
         const dir1 = parts[0];
         const dist1 = try aoc.toNum(u16, parts[1]);
-
         if (dir1.len != 1) return error.InvalidDirection;
 
-        const dir2: u8 = switch (parts[2][6]) {
-            '0' => 'R',
-            '1' => 'D',
-            '2' => 'L',
-            '3' => 'U',
-            else => return error.InvalidRGBDirection,
-        };
+        if (parts[2][6] -% '0' > 3) return error.InvalidRGBDirection;
+        const dir2 = "RDLU"[parts[2][6] - '0'];
         const dist2 = try std.fmt.parseInt(u32, parts[2][1..6], 16);
 
         const dir: [2]u8 = .{ dir1[0], dir2 };
@@ -38,10 +33,10 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         }
     }
 
-    const score1 = @abs(area[0]) + 1 + n_boundary[0] / 2;
-    const score2 = @abs(area[1]) + 1 + n_boundary[1] / 2;
+    var scores: [2]u64 = undefined;
+    for (0..2) |i| scores[i] = @abs(area[i]) + 1 + n_boundary[i] / 2;
 
-    return .{ score1, score2 };
+    return scores;
 }
 
 pub fn main() !void {
