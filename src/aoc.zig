@@ -27,37 +27,42 @@ pub const SplitErr = error{
 pub const Dir = enum { north, west, south, east };
 pub const Dirs = std.enums.values(Dir);
 
-pub const Pos = struct {
-    i: usize,
-    j: usize,
+pub const Pos = PosT(usize);
+pub fn PosT(comptime T: type) type {
+    return struct {
+        const Self = @This();
 
-    pub fn eql(a: Pos, b: Pos) bool {
-        return a.i == b.i and a.j == b.j;
-    }
+        i: T,
+        j: T,
 
-    pub fn step(p: Pos, dir: Dir) Pos {
-        return switch (dir) {
-            .north => .{ .i = p.i - 1, .j = p.j },
-            .west => .{ .i = p.i, .j = p.j - 1 },
-            .south => .{ .i = p.i + 1, .j = p.j },
-            .east => .{ .i = p.i, .j = p.j + 1 },
-        };
-    }
+        pub fn eql(a: Self, b: Self) bool {
+            return a.i == b.i and a.j == b.j;
+        }
 
-    pub fn stepn(p: Pos, dir: Dir, n: usize) Pos {
-        return switch (dir) {
-            .north => .{ .i = p.i - n, .j = p.j },
-            .west => .{ .i = p.i, .j = p.j - n },
-            .south => .{ .i = p.i + n, .j = p.j },
-            .east => .{ .i = p.i, .j = p.j + n },
-        };
-    }
+        pub fn step(p: Self, dir: Dir) Pos {
+            return switch (dir) {
+                .north => .{ .i = p.i - 1, .j = p.j },
+                .west => .{ .i = p.i, .j = p.j - 1 },
+                .south => .{ .i = p.i + 1, .j = p.j },
+                .east => .{ .i = p.i, .j = p.j + 1 },
+            };
+        }
 
-    pub fn dist1(a: Pos, b: Pos) usize {
-        return (if (a.i > b.i) a.i - b.i else b.i - a.i) +
-            (if (a.j > b.j) a.j - b.j else b.j - a.j);
-    }
-};
+        pub fn stepn(p: Self, dir: Dir, n: T) Self {
+            return switch (dir) {
+                .north => .{ .i = p.i - n, .j = p.j },
+                .west => .{ .i = p.i, .j = p.j - n },
+                .south => .{ .i = p.i + n, .j = p.j },
+                .east => .{ .i = p.i, .j = p.j + n },
+            };
+        }
+
+        pub fn dist1(a: Self, b: Self) T {
+            return (if (a.i > b.i) a.i - b.i else b.i - a.i) +
+                (if (a.j > b.j) a.j - b.j else b.j - a.j);
+        }
+    };
+}
 
 pub const Grid = struct {
     /// Number of rows
