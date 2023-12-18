@@ -6,7 +6,7 @@ const Size: usize = 143;
 var grid: aoc.Grid = undefined;
 var scores: [2]std.atomic.Value(u32) = .{ std.atomic.Value(u32).init(0), std.atomic.Value(u32).init(0) };
 
-const Orien = enum { vert, horiz };
+const Orien = enum { vert, horiz, start };
 
 const Pos = @Vector(2, u8);
 const State = struct {
@@ -37,25 +37,26 @@ const Graph = struct {
         pub fn next(self: *Iterator) ?Neigh {
             main: while (self.i < 3) {
                 if (self.step == 0) {
-                    if (self.src.pos[0] == 1 and self.src.pos[1] == 1) {
-                        // special handling of start node
-                        if (self.i == 0) { // go east
+                    switch (self.src.orien) {
+                        .vert => {
                             self.cur = .{ .pos = self.src.pos, .orien = .horiz };
-                            self.diff = .{ 0, 1 };
-                        } else if (self.i == 2) { // go south
-                            self.cur = .{ .pos = self.src.pos, .orien = .vert };
-                            self.diff = .{ 1, 0 };
-                        } else {
-                            return null;
-                        }
-                    } else {
-                        const nxt_orien: Orien = if (self.src.orien == .vert) .horiz else .vert;
-                        self.cur = .{ .pos = self.src.pos, .orien = nxt_orien };
-                        if (nxt_orien == .vert) {
-                            self.diff = if (self.i == 0) .{ 255, 0 } else .{ 1, 0 };
-                        } else {
                             self.diff = if (self.i == 0) .{ 0, 255 } else .{ 0, 1 };
-                        }
+                        },
+                        .horiz => {
+                            self.cur = .{ .pos = self.src.pos, .orien = .vert };
+                            self.diff = if (self.i == 0) .{ 255, 0 } else .{ 1, 0 };
+                        },
+                        .start => switch (self.i) {
+                            0 => {
+                                self.cur = .{ .pos = self.src.pos, .orien = .horiz };
+                                self.diff = .{ 0, 1 };
+                            },
+                            2 => {
+                                self.cur = .{ .pos = self.src.pos, .orien = .vert };
+                                self.diff = .{ 1, 0 };
+                            },
+                            else => unreachable,
+                        },
                     }
                     self.dist = 0;
                     const min_d = self.min_d;
@@ -132,7 +133,7 @@ fn Seen(comptime N: type, comptime D: type) type {
         }
 
         pub fn put(self: *Self, n: N, d: D) !void {
-            self.data[n.pos[0]][n.pos[1]][@intFromEnum(n.orien)] = d;
+            self.data[n.pos[0]][n.pos[1]][@intFromEnum(n.orien) & 1] = d;
         }
 
         pub fn getPtr(self: *Self, n: N) ?*D {
@@ -159,7 +160,7 @@ fn run_search(part: usize, min_d: u8, max_d: u8) !void {
     g.min_d = min_d;
     g.max_d = max_d;
 
-    try search.start(.{ .pos = .{ 1, 1 }, .orien = .vert });
+    try search.start(.{ .pos = .{ 1, 1 }, .orien = .start });
     var score: u32 = Size * Size * 10;
     while (try search.next()) |nxt| {
         if (nxt.node.pos[0] == grid.n - 2 and nxt.node.pos[1] == grid.m - 2) {
