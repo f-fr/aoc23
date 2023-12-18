@@ -80,7 +80,8 @@ const Graph = struct {
 };
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
-    var arena = std.heap.ArenaAllocator.init(aoc.allocator);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
     defer arena.deinit();
     const a = arena.allocator();
 
