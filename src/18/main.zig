@@ -3,9 +3,9 @@ const std = @import("std");
 const aoc = @import("aoc");
 
 pub fn run(lines: *aoc.Lines) ![2]u64 {
-    var y: [2]i64 = .{ 1_000_000_000, 1_000_000_000 };
+    var y: [2]i64 = .{ 0, 0 };
     var area: [2]i64 = .{ 0, 0 };
-    var n_boundary: [2]i64 = .{ 0, 0 };
+    var n_boundary: [2]u64 = .{ 0, 0 };
 
     while (try lines.next()) |line| {
         const parts = try aoc.splitAnyN(3, line, " ()");
@@ -21,10 +21,10 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
             '3' => 'U',
             else => return error.InvalidRGBDirection,
         };
-        const dist2 = try std.fmt.parseInt(i32, parts[2][1..6], 16);
+        const dist2 = try std.fmt.parseInt(u32, parts[2][1..6], 16);
 
         const dir: [2]u8 = .{ dir1[0], dir2 };
-        const dist: [2]i64 = .{ dist1, dist2 };
+        const dist: [2]u32 = .{ dist1, dist2 };
 
         for (0..2) |part| {
             switch (dir[part]) {
@@ -38,8 +38,8 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
         }
     }
 
-    const score1 = @abs(area[0]) + 1 + @abs(n_boundary[0]) / 2;
-    const score2 = @abs(area[1]) + 1 + @abs(n_boundary[1]) / 2;
+    const score1 = @abs(area[0]) + 1 + n_boundary[0] / 2;
+    const score2 = @abs(area[1]) + 1 + n_boundary[1] / 2;
 
     return .{ score1, score2 };
 }
