@@ -157,9 +157,9 @@ pub fn build(b: *std.Build) !void {
         \\        cur_day = day.day;
         \\
         \\        if (day.version.len == 0)
-        \\            aoc.println("Day {d:0>2}   : {d:.3} -- part 1: {d: >10}   part 2: {d: >14}", .{day.day, t, s[0], s[1]})
+        \\            aoc.println("Day {d:0>2}   : {d:.3} -- part 1: {d: >10}   part 2: {d: >15}", .{day.day, t, s[0], s[1]})
         \\        else
-        \\            aoc.println("Day {d:0>2} v{s}: {d:.3} -- part 1: {d: >10}   part 2: {d: >14}", .{day.day, day.version, t, s[0], s[1]});
+        \\            aoc.println("Day {d:0>2} v{s}: {d:.3} -- part 1: {d: >10}   part 2: {d: >15}", .{day.day, day.version, t, s[0], s[1]});
         \\    }
         \\    t_total += t_day; // last day
         \\    aoc.println("Total time (best versions): {d:.3}", .{t_total});
