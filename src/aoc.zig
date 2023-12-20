@@ -443,6 +443,12 @@ pub fn lcm(a: u64, b: u64) u64 {
     return a * (b / std.math.gcd(a, b));
 }
 
+pub fn lcmOfAll(nums: []u64) u64 {
+    var a = nums[0];
+    for (nums[1..]) |b| a = lcm(a, b);
+    return a;
+}
+
 /// Extended version of Euclid's algorithm.
 ///
 /// Returns s and t such that s*a+t*b=gcd.
