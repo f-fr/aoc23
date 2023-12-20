@@ -25,8 +25,6 @@ const Pulse = struct {
     high: bool,
 };
 
-const Seen = std.AutoHashMap(u64, void);
-
 fn getModuleIndex(alloc: std.mem.Allocator, modulenames: *ModuleNames, name: []const u8) !usize {
     const modulename = try modulenames.getOrPutAdapted(name, modulenames.ctx);
     if (!modulename.found_existing) {
@@ -103,65 +101,14 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     if (mod_names.count() > modules.items.len)
         try modules.appendNTimes(.{ .data = .{ .broadcaster = {} } }, mod_names.count() - modules.items.len);
 
-    var queue = try a.alloc(Pulse, n_edges * modules.items.len);
-    var nhigh: u64 = 0;
-    var nlow: u64 = 0;
+    const result = try findCycle(a, modules.items, bc_idx, rx_idx, 1000);
 
-    reset(modules.items);
-    for (0..1_000) |iter| {
-        _ = iter;
+    const score1 = result.nhigh * result.nlow;
 
-        var qput: usize = 1;
-        var qget: usize = 0;
-        queue[0] = .{ .source = 0, .target = bc_idx, .high = false };
-        while (qget < qput) {
-            const pulse = queue[qget];
-            qget += 1;
-            const mod = &modules.items[pulse.target];
-
-            if (pulse.high) nhigh += 1 else nlow += 1;
-
-            var send_high = false;
-            switch (mod.*.data) {
-                .flipflop => {
-                    if (pulse.high) continue;
-                    mod.*.data.flipflop.on = !mod.*.data.flipflop.on;
-                    send_high = mod.*.data.flipflop.on;
-                },
-                .conjunction => {
-                    if (pulse.high) {
-                        if (!mod.*.data.conjunction.input_high.isSet(pulse.source)) {
-                            mod.*.data.conjunction.nlow -= 1;
-                            mod.*.data.conjunction.input_high.set(pulse.source);
-                        }
-                    } else {
-                        if (mod.*.data.conjunction.input_high.isSet(pulse.source)) {
-                            mod.*.data.conjunction.nlow += 1;
-                            mod.*.data.conjunction.input_high.unset(pulse.source);
-                        }
-                    }
-                    send_high = mod.*.data.conjunction.nlow != 0;
-                },
-                .broadcaster => {
-                    send_high = pulse.high;
-                },
-            }
-
-            for (mod.*.targets) |tgt| {
-                // aoc.println("{} -{s}→ {}", .{ pulse.target, if (send_high) "high" else "low", tgt });
-                queue[qput] = .{ .source = pulse.target, .target = tgt, .high = send_high };
-                qput += 1;
-            }
-        }
-    }
-
-    const score1 = nhigh * nlow;
-
-    var seen = Seen.init(a);
     var cycles: [100]u64 = undefined;
     for (modules.items[bc_idx].targets, 0..) |tgt, i| {
         reset(modules.items);
-        cycles[i] = try findCycle(modules.items, tgt, rx_idx, queue, &seen);
+        cycles[i] = (try findCycle(a, modules.items, tgt, rx_idx, null)).cycle;
     }
 
     const score2 = aoc.lcmOfAll(cycles[0..modules.items[bc_idx].targets.len]);
@@ -169,12 +116,16 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     return .{ score1, score2 };
 }
 
-fn findCycle(modules: []Module, start: usize, end: usize, queue: []Pulse, seen: *Seen) !usize {
+fn findCycle(a: std.mem.Allocator, modules: []Module, start: usize, end: usize, niter: ?usize) !struct { nhigh: usize, nlow: usize, cycle: usize } {
+    reset(modules);
+
+    const queue = try a.alloc(Pulse, 10 * modules.len);
+    defer a.free(queue);
+
+    var nhigh: u64 = 0;
+    var nlow: u64 = 0;
     var iter: usize = 0;
-
-    seen.clearRetainingCapacity();
-
-    while (true) : (iter += 1) {
+    while (iter < niter orelse iter + 1) : (iter += 1) {
         var state: u64 = 0;
         for (modules, 0..) |mod, i| {
             if (mod.data == .flipflop and mod.data.flipflop.on) {
@@ -182,11 +133,7 @@ fn findCycle(modules: []Module, start: usize, end: usize, queue: []Pulse, seen: 
             }
         }
 
-        // if (try seen.fetchPut(state, {}) != null) {
-        //     if (state != 0) return error.NotCyclingToZero;
-        //     break;
-        // }
-        if (iter > 0 and state == 0) break; // hopefully this work
+        if (niter == null and iter > 0 and state == 0) break; // hopefully this work
 
         var qput: usize = 1;
         var qget: usize = 0;
@@ -196,6 +143,8 @@ fn findCycle(modules: []Module, start: usize, end: usize, queue: []Pulse, seen: 
             qget += 1;
             const mod = &modules[pulse.target];
 
+            if (pulse.high) nhigh += 1 else nlow += 1;
+
             if (pulse.target == end) {
                 if (!pulse.high) aoc.println("end is low at {}", .{iter + 1});
                 continue;
@@ -203,21 +152,21 @@ fn findCycle(modules: []Module, start: usize, end: usize, queue: []Pulse, seen: 
 
             var send_high = false;
             switch (mod.*.data) {
-                .flipflop => {
+                .flipflop => |*f| {
                     if (pulse.high) continue;
-                    mod.*.data.flipflop.on = !mod.*.data.flipflop.on;
-                    send_high = mod.*.data.flipflop.on;
+                    f.*.on = !f.*.on;
+                    send_high = f.*.on;
                 },
-                .conjunction => {
+                .conjunction => |*c| {
                     if (pulse.high) {
-                        if (!mod.*.data.conjunction.input_high.isSet(pulse.source)) {
-                            mod.*.data.conjunction.nlow -= 1;
-                            mod.*.data.conjunction.input_high.set(pulse.source);
+                        if (!c.*.input_high.isSet(pulse.source)) {
+                            c.*.nlow -= 1;
+                            c.*.input_high.set(pulse.source);
                         }
                     } else {
-                        if (mod.*.data.conjunction.input_high.isSet(pulse.source)) {
-                            mod.*.data.conjunction.nlow += 1;
-                            mod.*.data.conjunction.input_high.unset(pulse.source);
+                        if (c.*.input_high.isSet(pulse.source)) {
+                            c.*.nlow += 1;
+                            c.*.input_high.unset(pulse.source);
                         }
                     }
                     send_high = mod.*.data.conjunction.nlow != 0;
@@ -235,7 +184,7 @@ fn findCycle(modules: []Module, start: usize, end: usize, queue: []Pulse, seen: 
         }
     }
 
-    return iter;
+    return .{ .nhigh = nhigh, .nlow = nlow, .cycle = iter };
 }
 
 fn writeDot(mod_names: *const ModuleNames, modules: []const Module) !void {
