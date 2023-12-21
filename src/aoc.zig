@@ -77,6 +77,31 @@ pub fn GridT(comptime T: type) type {
         /// The data in row-major order
         data: []T,
 
+        pub fn init(alloc: std.mem.Allocator, n: usize, m: usize) !Self {
+            const data = try alloc.alloc(T, n * m);
+            return initBuffer(data, n, m);
+        }
+
+        pub fn initWith(alloc: std.mem.Allocator, n: usize, m: usize, c: T) !Self {
+            var g = try init(alloc, n, m);
+            g.setAll(c);
+            return g;
+        }
+
+        pub fn initBuffer(buf: []T, n: usize, m: usize) Self {
+            return Self{
+                .n = n,
+                .m = m,
+                .data = buf[0 .. n * m],
+            };
+        }
+
+        pub fn initBufferWith(buf: []T, n: usize, m: usize, c: T) Self {
+            var g = try initBuffer(buf, n, m);
+            g.setAll(c);
+            return g;
+        }
+
         /// Return the linear offset of the element at (i, j).
         pub fn offset(grid: *const Self, i: usize, j: usize) usize {
             return grid.m * i + j;
