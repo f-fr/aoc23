@@ -64,61 +64,67 @@ pub fn PosT(comptime T: type) type {
     };
 }
 
-pub const Grid = struct {
-    /// Number of rows
-    n: usize,
-    /// Number of columns
-    m: usize,
-    /// The data in row-major order
-    data: []u8,
+pub const Grid = GridT(u8);
 
-    /// Return the linear offset of the element at (i, j).
-    pub fn offset(grid: *const Grid, i: usize, j: usize) usize {
-        return grid.m * i + j;
-    }
+pub fn GridT(comptime T: type) type {
+    return struct {
+        const Self = @This();
 
-    /// Return the character at position (i, j)
-    pub fn at(grid: *const Grid, i: usize, j: usize) u8 {
-        return grid.data[grid.offset(i, j)];
-    }
+        /// Number of rows
+        n: usize,
+        /// Number of columns
+        m: usize,
+        /// The data in row-major order
+        data: []T,
 
-    pub fn atPos(grid: *const Grid, p: Pos) u8 {
-        return grid.at(p.i, p.j);
-    }
-
-    /// Return a slice to the ith row.
-    pub fn row(grid: *const Grid, i: usize) []u8 {
-        return grid.data[grid.m * i .. grid.m * i + grid.m];
-    }
-
-    pub fn findFirst(grid: *const Grid, ch: u8) ?Pos {
-        if (std.mem.indexOfScalar(u8, grid.data, ch)) |off| {
-            return .{ .i = off / grid.m, .j = off % grid.m };
+        /// Return the linear offset of the element at (i, j).
+        pub fn offset(grid: *const Self, i: usize, j: usize) usize {
+            return grid.m * i + j;
         }
 
-        return null;
-    }
+        /// Return the character at position (i, j)
+        pub fn at(grid: *const Self, i: usize, j: usize) T {
+            return grid.data[grid.offset(i, j)];
+        }
 
-    pub fn setAll(grid: *Grid, c: u8) void {
-        @memset(grid.data, c);
-    }
+        pub fn atPos(grid: *const Self, p: Pos) T {
+            return grid.at(p.i, p.j);
+        }
 
-    pub fn set(grid: *Grid, i: usize, j: usize, c: u8) void {
-        grid.data[grid.offset(i, j)] = c;
-    }
+        /// Return a slice to the ith row.
+        pub fn row(grid: *const Self, i: usize) []T {
+            return grid.data[grid.m * i .. grid.m * i + grid.m];
+        }
 
-    pub fn setPos(grid: *Grid, p: Pos, c: u8) void {
-        grid.set(p.i, p.j, c);
-    }
+        pub fn findFirst(grid: *const Self, ch: T) ?Pos {
+            if (std.mem.indexOfScalar(u8, grid.data, ch)) |off| {
+                return .{ .i = off / grid.m, .j = off % grid.m };
+            }
 
-    pub fn dupe(grid: *const Grid, alloc: std.mem.Allocator) !Grid {
-        return Grid{
-            .n = grid.n,
-            .m = grid.m,
-            .data = try alloc.dupe(u8, grid.data),
-        };
-    }
-};
+            return null;
+        }
+
+        pub fn setAll(grid: *Self, c: T) void {
+            @memset(grid.data, c);
+        }
+
+        pub fn set(grid: *Self, i: usize, j: usize, c: T) void {
+            grid.data[grid.offset(i, j)] = c;
+        }
+
+        pub fn setPos(grid: *Self, p: Pos, c: T) void {
+            grid.set(p.i, p.j, c);
+        }
+
+        pub fn dupe(grid: *const Self, alloc: std.mem.Allocator) !Self {
+            return Self{
+                .n = grid.n,
+                .m = grid.m,
+                .data = try alloc.dupe(T, grid.data),
+            };
+        }
+    };
+}
 
 pub const Lines = struct {
     file: ?std.fs.File = null,
