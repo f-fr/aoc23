@@ -57,6 +57,15 @@ pub fn PosT(comptime T: type) type {
             };
         }
 
+        pub fn maybeStep(p: Self, dir: Dir, n: T, m: T) ?Self {
+            return switch (dir) {
+                .north => if (p.i > 0) .{ .i = p.i - 1, .j = p.j } else null,
+                .west => if (p.j > 0) .{ .i = p.i, .j = p.j - 1 } else null,
+                .south => if (p.i + 1 < n) .{ .i = p.i + 1, .j = p.j } else null,
+                .east => if (p.j + 1 < m) .{ .i = p.i, .j = p.j + 1 } else null,
+            };
+        }
+
         pub fn dist1(a: Self, b: Self) T {
             return (if (a.i > b.i) a.i - b.i else b.i - a.i) +
                 (if (a.j > b.j) a.j - b.j else b.j - a.j);
