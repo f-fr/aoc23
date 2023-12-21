@@ -116,7 +116,7 @@ pub fn run(lines: *aoc.Lines) ![2]u64 {
     return .{ score1, score2 };
 }
 
-fn findCycle(a: std.mem.Allocator, modules: []Module, start: usize, end: usize, niter: ?usize) !struct { nhigh: usize, nlow: usize, cycle: usize } {
+fn findCycle(a: std.mem.Allocator, modules: []Module, start: usize, end: usize, niter: ?usize) !struct { nhigh: u64, nlow: u64, cycle: usize } {
     reset(modules);
 
     const queue = try a.alloc(Pulse, 10 * modules.len);
