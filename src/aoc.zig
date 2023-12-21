@@ -39,7 +39,7 @@ pub fn PosT(comptime T: type) type {
             return a.i == b.i and a.j == b.j;
         }
 
-        pub fn step(p: Self, dir: Dir) Pos {
+        pub fn step(p: Self, dir: Dir) Self {
             return switch (dir) {
                 .north => .{ .i = p.i - 1, .j = p.j },
                 .west => .{ .i = p.i, .j = p.j - 1 },
