@@ -56,14 +56,22 @@ fn runPart2(alloc: std.mem.Allocator, grid: *const aoc.Grid, start: aoc.Pos, nit
     defer arena.deinit();
     const a = arena.allocator();
 
-    const Pos = aoc.PosT(i32);
+    const Pos = aoc.PosT(i16);
     const Queue = std.ArrayList(Pos);
-    var queue1 = try Queue.initCapacity(a, grid.n * grid.m);
-    var queue2 = try Queue.initCapacity(a, grid.n * grid.m);
+    var queue1 = try Queue.initCapacity(a, grid.n * grid.m * 4);
+    var queue2 = try Queue.initCapacity(a, grid.n * grid.m * 4);
     var cur = &queue1;
     var nxt = &queue2;
 
-    var seen = std.AutoHashMap(Pos, void).init(a);
+    // const Seen = std.AutoHashMap(Pos, void);
+    // var seen1 = Seen.init(a);
+    // var seen2 = Seen.init(a);
+    const N = 2000;
+    var seen = try alloc.alloc(bool, N * N);
+    var seencnt: u64 = 0;
+    var nxtseencnt: u64 = 0;
+
+    @memset(seen, false);
     cur.appendAssumeCapacity(.{ .i = @intCast(start.i), .j = @intCast(start.j) });
 
     var prv_cnt: i64 = 0;
@@ -76,20 +84,23 @@ fn runPart2(alloc: std.mem.Allocator, grid: *const aoc.Grid, start: aoc.Pos, nit
     const m: i32 = @intCast(grid.m);
     while (iter <= @max(niter, 100)) : (iter += 1) {
         nxt.clearRetainingCapacity();
-        seen.clearRetainingCapacity();
         for (cur.items) |p| {
             for (aoc.Dirs) |dir| {
                 const q = p.step(dir);
                 if (grid.at(@intCast(@mod(q.i, n)), @intCast(@mod(q.j, m))) == '#') continue;
-                const entry = try seen.getOrPut(q);
-                if (!entry.found_existing) {
-                    try nxt.append(q);
+                const qi: i64 = @intCast(q.i);
+                const qj: i64 = @intCast(q.j);
+                const idx = (qi + N / 2 + (qj + N / 2) * N);
+                if (!seen[@intCast(idx)]) {
+                    seen[@intCast(idx)] = true;
+                    seencnt += 1;
+                    nxt.appendAssumeCapacity(q);
                 }
             }
         }
         std.mem.swap(*Queue, &cur, &nxt);
         if (iter > 2 * grid.n and iter % grid.n == niter % grid.n) {
-            const cnt = seen.count();
+            const cnt = seencnt;
             // evaluate the interpolation polynomial at x = niter
             //
             // y1 * (x - x1)(x - x2)(x - x3)/(x2 - x1)/(x3 - x1) ...
@@ -112,9 +123,10 @@ fn runPart2(alloc: std.mem.Allocator, grid: *const aoc.Grid, start: aoc.Pos, nit
             }
 
             prv2_cnt = prv_cnt;
-            prv_cnt = cnt;
+            prv_cnt = @intCast(cnt);
             if (value > 0) prv_score = @intFromFloat(value);
         }
+        std.mem.swap(u64, &seencnt, &nxtseencnt);
     }
 
     return score2;
