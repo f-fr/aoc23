@@ -24,7 +24,22 @@ pub const SplitErr = error{
     TooFewElementsForSplit,
 };
 
-pub const Dir = enum { north, west, south, east };
+pub const Dir = enum {
+    north,
+    west,
+    south,
+    east,
+
+    pub fn reverse(self: Dir) Dir {
+        return switch (self) {
+            .north => .south,
+            .south => .north,
+            .east => .west,
+            .west => .east,
+        };
+    }
+};
+
 pub const Dirs = std.enums.values(Dir);
 
 pub const Pos = PosT(usize);
