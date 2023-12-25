@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) !void {
     while (try dir_it.next()) |d| {
         if (d.kind != .directory or d.name.len > 2) continue;
         const day = std.fmt.parseInt(u8, d.name, 10) catch continue;
-        if (day < 0 or day > 24) continue;
+        if (day < 0 or day > 25) continue;
 
         var day_dir = try dir.openDir(d.name, .{ .iterate = true });
         defer day_dir.close();
