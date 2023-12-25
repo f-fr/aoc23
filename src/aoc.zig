@@ -507,13 +507,13 @@ pub fn lcmOfAll(nums: []u64) u64 {
 /// Extended version of Euclid's algorithm.
 ///
 /// Returns s and t such that s*a+t*b=gcd.
-pub fn gcd_ext(a: i64, b: i64) struct { gcd: i64, s: i64, t: i64 } {
+pub fn gcd_ext(comptime T: type, a: T, b: T) struct { gcd: T, s: T, t: T } {
     var r0 = a;
     var r1 = b;
-    var s0: i64 = 1;
-    var s1: i64 = 0;
-    var t0: i64 = 0;
-    var t1: i64 = 1;
+    var s0: T = 1;
+    var s1: T = 0;
+    var t0: T = 0;
+    var t1: T = 1;
     while (r1 != 0) {
         const q = @divFloor(r0, r1);
         const r2 = @rem(r0, r1);
@@ -534,31 +534,37 @@ pub fn gcd_ext(a: i64, b: i64) struct { gcd: i64, s: i64, t: i64 } {
     return .{ .gcd = r0, .s = s0, .t = t0 };
 }
 
-pub const Crt = struct { a: u64, m: u64 };
+pub fn Crt(comptime T: type) type {
+    return struct { a: T, m: T };
+}
 
-pub fn crt(eqs: []const Crt) ?u64 {
+pub fn crt(comptime T: type, eqs: []const Crt(T)) ?T {
     if (eqs.len == 0) return null;
     if (eqs.len == 1) return eqs[0].a;
 
-    var a0: i64 = @intCast(eqs[0].a);
-    var m0: i64 = @intCast(eqs[0].m);
+    var a0: T = @intCast(eqs[0].a);
+    var m0: T = @intCast(eqs[0].m);
     for (1..eqs.len) |i| {
-        const a1: i64 = @intCast(eqs[i].a);
-        const m1: i64 = @intCast(eqs[i].m);
-        const gcd = gcd_ext(m0, m1);
+        const a1: T = @intCast(eqs[i].a);
+        const m1: T = @intCast(eqs[i].m);
+        const gcd = gcd_ext(T, m0, m1);
         if (@rem(a0, gcd.gcd) != @rem(a1, gcd.gcd)) return null;
         const l = m0 * @divFloor(m1, gcd.gcd);
-        const x = @rem(l + a0 - gcd.s * m0 * @divFloor(a0 - a1, gcd.gcd), l);
+        if (@rem(m1, gcd.gcd) != 0) unreachable;
+        const x = @rem(a0 - gcd.s * m0 * @divFloor(a0 - a1, gcd.gcd), l);
         a0 = x;
         m0 = l;
+        // there should be a better way to ensure 0 <= a0 < m0
+        while (a0 < 0) : (a0 += m0) {}
+        while (a0 >= m0) : (a0 -= m0) {}
     }
 
     return @intCast(a0);
 }
 
 test "crt" {
-    try std.testing.expectEqual(@as(?u64, 301), //
-        crt(&.{
+    try std.testing.expectEqual(@as(?i64, 301), //
+        crt(i64, &.{
         .{ .a = 1, .m = 2 },
         .{ .a = 1, .m = 3 },
         .{ .a = 1, .m = 4 },
@@ -567,15 +573,15 @@ test "crt" {
         .{ .a = 0, .m = 7 },
     }));
 
-    try std.testing.expectEqual(@as(?u64, 47), //
-        crt(&.{
+    try std.testing.expectEqual(@as(?i64, 47), //
+        crt(i64, &.{
         .{ .a = 2, .m = 3 },
         .{ .a = 3, .m = 4 },
         .{ .a = 2, .m = 5 },
     }));
 
-    try std.testing.expectEqual(@as(?u64, 23), //
-        crt(&.{
+    try std.testing.expectEqual(@as(?i64, 23), //
+        crt(i64, &.{
         .{ .a = 2, .m = 3 },
         .{ .a = 3, .m = 5 },
         .{ .a = 2, .m = 7 },
